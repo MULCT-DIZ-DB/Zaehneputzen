@@ -77,7 +77,7 @@ def js(harness) -> Callable[..., Any]:
     """Returns a helper that runs a JS function body with app modules available.
 
     The body gets an object ``m`` with all logic modules (config, timer,
-    storage, rewards, sequins) and the call argument as ``arg``.
+    storage, rewards, sequins, sketch, devmode, backup) and the call argument as ``arg``.
 
     Args:
         harness: Module harness page.
@@ -86,7 +86,7 @@ def js(harness) -> Callable[..., Any]:
         ``run(body, arg=None)`` executing ``body`` and returning its result.
     """
     loader = """async ([body, arg]) => {
-        const names = ['config', 'timer', 'storage', 'rewards', 'sequins', 'sketch'];
+        const names = ['config', 'timer', 'storage', 'rewards', 'sequins', 'sketch', 'devmode', 'backup'];
         const m = {};
         for (const n of names) { m[n] = await import(`./js/${n}.js`); }
         const fn = new Function('m', 'arg', `return (async () => { ${body} })();`);
@@ -116,7 +116,7 @@ def app_page(page, base_url: str):
     page.on("pageerror", lambda exc: errors.append(str(exc)))
     page.clock.install(time=config.TEST_CLOCK_START)
     page.goto(f"{base_url}/index.html")
-    page.evaluate("localStorage.clear()")
+    page.evaluate("document.fonts.ready.then(() => localStorage.clear())")  # don't abort the font download
     page.goto(f"{base_url}/index.html?schnell=1")
     page.wait_for_selector("#screen-start.active")
     page.console_errors = errors

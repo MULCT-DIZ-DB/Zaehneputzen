@@ -22,6 +22,10 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
     """Serves the app folder with correct MIME types and without caching."""
 
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, **config.EXTRA_MIME_TYPES}
+    # HTTP/1.1 keep-alive: with HTTP/1.0 every response closes the socket, which on Windows can
+    # reset the connection mid-transfer (e.g. the 200 KB font) when the browser already sent
+    # its next request on it.
+    protocol_version = "HTTP/1.1"
 
     def end_headers(self) -> None:
         """Adds a no-cache header so changes show up immediately during development."""
@@ -32,6 +36,18 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
         """Keeps the console quiet except for errors."""
         if args and str(args[1]).startswith(("4", "5")):
             super().log_message(format, *args)
+
+
+class QuietServer(ThreadingHTTPServer):
+    """Threaded server that ignores clients closing idle keep-alive connections."""
+
+    daemon_threads = True
+
+    def handle_error(self, request, client_address) -> None:
+        """Skips the traceback for normal disconnects, reports everything else."""
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        super().handle_error(request, client_address)
 
 
 def make_server(host: str, port: int, directory: Path = config.APP_DIR) -> ThreadingHTTPServer:
@@ -46,7 +62,7 @@ def make_server(host: str, port: int, directory: Path = config.APP_DIR) -> Threa
         The configured server; call ``serve_forever()`` to run it.
     """
     handler = functools.partial(AppRequestHandler, directory=str(directory))
-    return ThreadingHTTPServer((host, port), handler)
+    return QuietServer((host, port), handler)
 
 
 def local_ip() -> str:
