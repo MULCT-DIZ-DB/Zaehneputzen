@@ -10,6 +10,7 @@ import { drawDancer, drawOutfitPreview } from '../dancer.js';
 import { drawSticker } from '../stickers.js';
 import { drawBackground } from '../backgrounds.js';
 import { makeScreen, textButton } from './base.js';
+import { playOpen } from './gamekit.js';
 import { sequinStatesOf } from './start.js';
 
 /**
@@ -50,9 +51,12 @@ export function createRewardScreen(ctx) {
   const giftHint = el('p', { cls: 'gift-hint', text: TEXT.giftTap });
   const reveals = el('div', { cls: 'reveals' });
   const next = textButton(TEXT.next, () => ctx.show('start'), 'btn-big', 'btn-reward-next');
+  const games = textButton(TEXT.playTime, () => { ctx.music.unlock(); ctx.show('games'); }, 'btn-big btn-games', 'btn-games');
+  /** Shows the next button and, while the play window is open, the play-time button. @returns {void} */
+  const showButtons = () => { next.hidden = false; games.hidden = !playOpen(ctx); };
   body.append(confetti, el('div', { cls: 'reward-layout' }, [
     party,
-    el('div', { cls: 'reward-panel' }, [title, info, gift, giftHint, reveals, next]),
+    el('div', { cls: 'reward-panel' }, [title, info, gift, giftHint, reveals, el('div', { cls: 'reward-buttons' }, [next, games])]),
   ]));
   /** @type {import('../rewards.js').Reward|null} */ let reward = null;
   let openTimer = 0;
@@ -73,7 +77,7 @@ export function createRewardScreen(ctx) {
     if (move) reveals.append(card(`${TEXT.newMove} ${move.name}`, el('span', { cls: 'move-badge', text: '♪' })));
     gift.hidden = true;
     giftHint.hidden = true;
-    next.hidden = false;
+    showButtons();
   }
 
   gift.addEventListener('click', () => {
@@ -98,7 +102,9 @@ export function createRewardScreen(ctx) {
       gift.classList.remove('open');
       gift.hidden = !reward;
       giftHint.hidden = !reward;
-      next.hidden = Boolean(reward);
+      next.hidden = true;
+      games.hidden = true;
+      if (!reward) showButtons();
       info.textContent = reward
         ? (reward.streak > 0 ? `★ ${reward.streak} ${TEXT.streak}` : '')
         : TEXT.noGiftNow;

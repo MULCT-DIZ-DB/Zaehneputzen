@@ -11,6 +11,7 @@ import { decodeStates } from '../sequins.js';
 import { SEQUIN_POINTS } from '../dancer.js';
 import { hasProgress, needsBackup, lastBackupSessions } from '../backup.js';
 import { makeScreen, iconButton, textButton } from './base.js';
+import { playOpen, playLabel } from './gamekit.js';
 import { applyBackupFile, saveBackup } from './backuppanel.js';
 
 /** @typedef {import('./base.js').AppContext} AppContext */
@@ -90,7 +91,10 @@ export function createStartScreen(ctx) {
     iconButton('kleid', TEXT.dressUp, () => ctx.show('dress'), '', { id: 'btn-dress', showLabel: true }),
     iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
     iconButton('bild', TEXT.backgrounds, () => ctx.show('backgrounds'), '', { id: 'btn-backgrounds', showLabel: true }),
+    iconButton('spiele', TEXT.playTime, () => { ctx.music.unlock(); ctx.show('games'); }, 'btn-games-start',
+      { id: 'btn-games-start', showLabel: true }),
   ]);
+  const gamesBtn = /** @type {HTMLElement} */ (menu.querySelector('#btn-games-start'));
   const reminder = textButton(TEXT.backupReminder, () => {}, 'btn-small btn-reminder', 'btn-backup-reminder');
   onHoldRelease(reminder, UI.parentHoldMs, () => {
     saveBackup(ctx).then((saved) => { if (saved) reminder.hidden = true; });
@@ -122,6 +126,8 @@ export function createStartScreen(ctx) {
       restore.hidden = hasProgress(saved);
       reminder.hidden = !needsBackup(saved, lastBackupSessions());
       devBadge.hidden = !ctx.isDevMode();
+      gamesBtn.hidden = !playOpen(ctx);
+      /** @type {HTMLElement} */ (gamesBtn.querySelector('.btn-label')).textContent = playLabel(ctx);
       greeting.textContent = state.name ? `${TEXT.greeting} ${state.name}!` : `${TEXT.greeting}!`;
       const days = computeStreak(state.calendar, new Date());
       streak.textContent = days > 0 ? `★ ${days} ${TEXT.streak}` : '';

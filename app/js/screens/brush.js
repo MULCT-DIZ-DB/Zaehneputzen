@@ -10,6 +10,7 @@ import { drawMouth, ZONE_CENTERS, SPOTS_PER_ZONE, icon } from '../art.js';
 import { drawBackground } from '../backgrounds.js';
 import { ZoneTimer, zoneWatcher } from '../timer.js';
 import { completeSession } from '../rewards.js';
+import { openPlayWindow } from '../playtime.js';
 import { makeScreen, iconButton } from './base.js';
 
 const RING_R = 44;
@@ -140,7 +141,8 @@ export function createBrushScreen(ctx) {
       return;
     }
     ctx.music.fanfare();
-    const result = completeSession(ctx.getState(), { date: new Date(), completed: true, rng: Math.random });
+    const brushed = openPlayWindow(ctx.getState(), Date.now()); // games open after every completed brushing
+    const result = completeSession(brushed, { date: new Date(), completed: true, rng: Math.random });
     ctx.setState(result.state);
     ctx.show('reward', result.reward);
   }

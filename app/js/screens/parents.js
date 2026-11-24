@@ -3,7 +3,7 @@
  * Hidden parent menu: name, brushing time, zone order, music, reset.
  * @module screens/parents
  */
-import { TEXT, TIMER, ZONE_ORDERS, MAX_NAME_LENGTH } from '../config.js';
+import { TEXT, TIMER, ZONE_ORDERS, MAX_NAME_LENGTH, GAMES } from '../config.js';
 import { el } from '../dom.js';
 import { defaultState } from '../storage.js';
 import { makeScreen, textButton } from './base.js';
@@ -37,18 +37,23 @@ export function createParentsScreen(ctx) {
     ZONE_ORDERS.map((o) => el('option', { text: o.label, attrs: { value: o.id } }))));
   const music = /** @type {HTMLInputElement} */ (el('input', { id: 'input-music', attrs: { type: 'checkbox' } }));
   const volume = /** @type {HTMLInputElement} */ (el('input', { id: 'input-volume', attrs: { type: 'range', min: 0, max: 1, step: 0.05 } }));
+  const play = /** @type {HTMLInputElement} */ (el('input', { id: 'input-play', attrs: {
+    type: 'range', min: GAMES.minMinutes, max: GAMES.maxMinutes, step: 1 } }));
+  const playValue = el('span', { cls: 'form-value' });
+  const playText = (m) => (m > 0 ? `${m} ${TEXT.minutes}` : TEXT.playOff);
 
   /** Reads the form into the state. @returns {void} */
   function save() {
     const state = ctx.getState();
     const settings = { ...state.settings, totalSec: Number(total.value), zoneOrder: order.value,
-      music: music.checked, volume: Number(volume.value) };
+      music: music.checked, volume: Number(volume.value), playMinutes: Number(play.value) };
     totalValue.textContent = `${settings.totalSec} ${TEXT.seconds}`;
+    playValue.textContent = playText(settings.playMinutes);
     ctx.setState({ ...state, name: name.value.trim().slice(0, MAX_NAME_LENGTH), settings });
     ctx.music.configure(settings);
   }
 
-  [name, total, order, music, volume].forEach((c) => {
+  [name, total, order, music, volume, play].forEach((c) => {
     c.addEventListener('input', save);
     c.addEventListener('change', save);
   });
@@ -68,6 +73,7 @@ export function createParentsScreen(ctx) {
     row(TEXT.orderLabel, order),
     row(TEXT.musicLabel, music),
     row(TEXT.volumeLabel, volume),
+    row(TEXT.playLabel, play, playValue),
   ]), el('div', { cls: 'parents-actions' }, [reset, close]), backup.el, dev.el);
   const version = el('p', { cls: 'app-version', id: 'app-version' });
   body.append(version);
@@ -82,6 +88,8 @@ export function createParentsScreen(ctx) {
     order.value = s.zoneOrder;
     music.checked = s.music;
     volume.value = String(s.volume);
+    play.value = String(s.playMinutes);
+    playValue.textContent = playText(s.playMinutes);
   }
 
   return {
