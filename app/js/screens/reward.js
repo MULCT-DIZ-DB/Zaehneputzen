@@ -3,11 +3,12 @@
  * Reward screen: dance party with confetti, gift box, reveal of sticker/outfit/move.
  * @module screens/reward
  */
-import { TEXT, UI, MOVES, OUTFITS, STICKERS } from '../config.js';
+import { TEXT, UI, MOVES, OUTFITS, STICKERS, BACKGROUNDS } from '../config.js';
 import { el, clear, replayClass } from '../dom.js';
 import { drawGift, drawConfetti } from '../art.js';
 import { drawDancer, drawOutfitPreview } from '../dancer.js';
 import { drawSticker } from '../stickers.js';
+import { drawBackground } from '../backgrounds.js';
 import { makeScreen, textButton } from './base.js';
 import { sequinStatesOf } from './start.js';
 
@@ -66,6 +67,8 @@ export function createRewardScreen(ctx) {
       : card(TEXT.albumFull, drawSticker(STICKERS[0].id), 'reward-sticker'));
     const outfit = OUTFITS.find((o) => o.id === reward.outfit);
     if (outfit) reveals.append(card(`${TEXT.newOutfit} ${outfit.name}`, drawOutfitPreview(outfit.id)));
+    const bg = BACKGROUNDS.find((b) => b.id === reward.background);
+    if (bg) reveals.append(card(`${TEXT.newBackground} ${bg.name}`, drawBackground(bg.id, 'bg-art reveal-bg')));
     const move = MOVES.find((m) => m.id === reward.move);
     if (move) reveals.append(card(`${TEXT.newMove} ${move.name}`, el('span', { cls: 'move-badge', text: '♪' })));
     gift.hidden = true;

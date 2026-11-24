@@ -6,6 +6,7 @@
  */
 import {
   STORAGE_KEY, SCHEMA_VERSION, MAX_NAME_LENGTH, DEFAULT_SETTINGS, TIMER, ZONE_ORDERS, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
+  BACKGROUNDS,
 } from './config.js';
 
 /**
@@ -21,6 +22,8 @@ import {
  * @property {string[]} wearing Outfit ids currently worn (max one per slot).
  * @property {Object<string, string>} sequins Outfit id → encoded sequin states.
  * @property {Object<string, DayEntry>} calendar Date key (YYYY-MM-DD) → day entry.
+ * @property {string[]} backgrounds Unlocked brushing backgrounds.
+ * @property {string} background Selected brushing background.
  * @property {Settings} settings
  */
 
@@ -46,6 +49,8 @@ export function defaultState() {
     wearing: [],
     sequins: {},
     calendar: {},
+    backgrounds: [BACKGROUNDS[0].id],
+    background: BACKGROUNDS[0].id,
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -171,6 +176,9 @@ export function validateState(raw) {
   const outfits = cleanIds(r.outfits, OUTFITS);
   const moves = cleanIds(r.moves, MOVES);
   if (!moves.includes(MOVES[0].id)) moves.unshift(MOVES[0].id);
+  const backgrounds = cleanIds(r.backgrounds, BACKGROUNDS);
+  if (!backgrounds.includes(BACKGROUNDS[0].id)) backgrounds.unshift(BACKGROUNDS[0].id);
+  const background = typeof r.background === 'string' && backgrounds.includes(r.background) ? r.background : BACKGROUNDS[0].id;
   /** @type {Object<string, string>} */
   const sequins = {};
   if (isObject(r.sequins)) {
@@ -188,6 +196,8 @@ export function validateState(raw) {
     wearing: cleanWearing(r.wearing, outfits),
     sequins,
     calendar: cleanCalendar(r.calendar),
+    backgrounds,
+    background,
     settings: cleanSettings(r.settings),
   };
 }

@@ -4,13 +4,13 @@
  * Real progress is never overwritten while the mode is active.
  * @module devmode
  */
-import { DEV, STICKERS, OUTFITS, MOVES } from './config.js';
+import { DEV, STICKERS, OUTFITS, MOVES, BACKGROUNDS } from './config.js';
 
 /** @typedef {import('./storage.js').State} State */
 /** @typedef {{a: number, b: number}} Challenge */
 
 /** Fields that may be saved while developer mode is active. */
-const EDITABLE_FIELDS = /** @type {const} */ (['name', 'settings', 'wearing', 'sequins']);
+const EDITABLE_FIELDS = /** @type {const} */ (['name', 'settings', 'wearing', 'sequins', 'background']);
 
 /**
  * Creates a multiplication task with two single-digit factors.
@@ -37,7 +37,7 @@ export function checkAnswer(challenge, answer) {
 }
 
 /**
- * Returns a view of the state with every sticker, outfit and move unlocked.
+ * Returns a view of the state with every sticker, outfit, move and background unlocked.
  * @param {State} state Real state (not modified).
  * @returns {State}
  */
@@ -47,6 +47,7 @@ export function unlockAll(state) {
     stickers: STICKERS.map((s) => s.id),
     outfits: OUTFITS.map((o) => o.id),
     moves: MOVES.map((m) => m.id),
+    backgrounds: BACKGROUNDS.map((b) => b.id),
   };
 }
 

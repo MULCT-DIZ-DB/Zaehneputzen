@@ -47,6 +47,7 @@ export const REWARDS = Object.freeze({
   cutoffHour: 14,
   maxRewardsPerDay: 2,
   outfitEverySessions: 5,
+  backgroundEverySessions: 4,
   /** Full days in a row needed for move 2, 3, 4 … (move 1 is free). */
   moveStreakThresholds: [3, 7, 14, 21, 30],
   /** Every n-th sticker of the catalogue is a glitter sticker. */
@@ -73,6 +74,14 @@ export const PALETTE = Object.freeze({
   mund: '#9C6461',
   zunge: '#D98F8B',
   rot: '#C4655A',
+  nacht: '#5A6582',
+  himmel: '#D7E5E6',
+  wasser: '#9DBFC4',
+  holz: '#D9B99A',
+  wiese: '#BCD3B2',
+  nachthuegel: '#6F8576',
+  nachthuegel2: '#7E9585',
+  buehnenwand: '#8D7A9C',
 });
 
 /** Colours used for stickers (two per shape). */
@@ -131,6 +140,17 @@ export const MOVES = Object.freeze([
   { id: 'sternsprung', name: 'Sternsprung', css: 'move-sternsprung' },
 ]);
 
+/** Brushing backgrounds in unlock order; the first one is owned from the start. */
+export const BACKGROUNDS = Object.freeze([
+  { id: 'papier', name: 'Papier' },
+  { id: 'ballettsaal', name: 'Ballettsaal' },
+  { id: 'blumenwiese', name: 'Blumenwiese' },
+  { id: 'sternenhimmel', name: 'Sternenhimmel' },
+  { id: 'unterwasser', name: 'Unterwasser' },
+  { id: 'buehne', name: 'Bühne' },
+  { id: 'regenbogenland', name: 'Regenbogenland' },
+]);
+
 /** Default parent settings. */
 export const DEFAULT_SETTINGS = Object.freeze({
   totalSec: TIMER.defaultTotalSec,
@@ -183,7 +203,10 @@ export const UI = Object.freeze({
   parentHoldMs: 3000,
   giftOpenMs: 900,
   partyMs: 5000,
-  confettiCount: 12,
+  /** Confetti keeps falling while the reward screen is open (pieces loop endlessly). */
+  confettiCount: 16,
+  confettiMinSec: 3.2,
+  confettiMaxSec: 5.5,
 });
 
 /** Progress backup file (export/import). */
@@ -254,6 +277,8 @@ export const TEXT = Object.freeze({
   devActive: 'Entwicklermodus aktiv: alles ist freigeschaltet. Echter Fortschritt bleibt unverändert.',
   devOff: 'Ausschalten',
   devBadge: 'Entwickler',
+  backgrounds: 'Hintergründe',
+  newBackground: 'Neuer Hintergrund:',
   backupTitle: 'Sicherung',
   exportBtn: 'Fortschritt exportieren',
   importBtn: 'Fortschritt importieren',

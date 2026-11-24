@@ -16,6 +16,7 @@ import { createAlbumScreen } from './screens/album.js';
 import { createDressScreen } from './screens/dress.js';
 import { createCalendarScreen } from './screens/calendar.js';
 import { createParentsScreen } from './screens/parents.js';
+import { createBackgroundsScreen } from './screens/backgrounds.js';
 
 /** Query parameter for the short debug/test mode. */
 const FAST_PARAM = 'schnell';
@@ -23,7 +24,7 @@ const FAST_PARAM = 'schnell';
 /** Screen factories in display order. */
 const FACTORIES = [
   createStartScreen, createCountdownScreen, createBrushScreen, createRewardScreen,
-  createAlbumScreen, createDressScreen, createCalendarScreen, createParentsScreen,
+  createAlbumScreen, createDressScreen, createCalendarScreen, createBackgroundsScreen, createParentsScreen,
 ];
 
 /**

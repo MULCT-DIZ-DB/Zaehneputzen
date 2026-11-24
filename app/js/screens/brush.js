@@ -1,17 +1,16 @@
 // @ts-check
 /**
- * Brushing screen: mouth with active zone, moving brush, brushing dancer,
+ * Brushing screen: mouth with active zone, moving brush, unlockable background,
  * progress ring, zone change hint and pause.
  * @module screens/brush
  */
 import { TEXT, TIMER, ZONES, ZONE_ORDERS } from '../config.js';
 import { el, svg, svgRoot, replayClass, clear } from '../dom.js';
 import { drawMouth, ZONE_CENTERS, SPOTS_PER_ZONE, icon } from '../art.js';
-import { drawDancer } from '../dancer.js';
+import { drawBackground } from '../backgrounds.js';
 import { ZoneTimer, zoneWatcher } from '../timer.js';
 import { completeSession } from '../rewards.js';
 import { makeScreen, iconButton } from './base.js';
-import { sequinStatesOf } from './start.js';
 
 const RING_R = 44;
 const RING_LEN = 2 * Math.PI * RING_R;
@@ -46,17 +45,16 @@ export function createBrushScreen(ctx) {
   const hint = el('div', { cls: 'switch-hint', id: 'switch-hint' });
   const go = el('div', { cls: 'go-pop', text: TEXT.go });
   const ring = progressRing();
-  const dancerBox = el('div', { cls: 'brush-dancer' });
+  const bgLayer = el('div', { cls: 'brush-bg' });
   const pauseBtn = el('button', { cls: 'btn btn-pause', id: 'btn-pause', attrs: { type: 'button', 'aria-label': TEXT.pause } },
     [icon('pause')]);
   const resumeBtn = el('button', { cls: 'btn btn-big btn-resume', id: 'btn-resume', attrs: { type: 'button' },
     on: { click: () => setPaused(false) } }, [icon('play'), el('span', { text: TEXT.resume })]);
   const stopBtn = iconButton('kreuz', TEXT.stop, () => finish(false), 'btn-stop', { id: 'btn-stop' });
   const pausedBox = el('div', { cls: 'paused-box' }, [stopBtn, el('p', { cls: 'paused-title', text: TEXT.paused }), resumeBtn]);
-  body.append(el('div', { cls: 'brush-layout' }, [
-    el('div', { cls: 'mouth-wrap' }, [mouth.root]),
-    el('div', { cls: 'brush-side' }, [el('div', { cls: 'brush-info' }, [label, ring.root]), dancerBox]),
-  ]), hint, go, pausedBox, pauseBtn);
+  section.prepend(bgLayer);
+  body.append(el('div', { cls: 'brush-top' }, [label, ring.root]), el('div', { cls: 'mouth-wrap' }, [mouth.root]),
+    hint, go, pausedBox, pauseBtn);
 
   /** @type {ZoneTimer|null} */ let timer = null;
   let order = ZONE_ORDERS[0].order;
@@ -102,7 +100,7 @@ export function createBrushScreen(ctx) {
   }
 
   /**
-   * Zone change: chime, dancer spin and hint text.
+   * Zone change: chime, label pop and hint text.
    * @param {number} index New position in order.
    * @returns {void}
    */
@@ -111,7 +109,7 @@ export function createBrushScreen(ctx) {
     ctx.music.chime();
     hint.textContent = `${TEXT.switchTo} ${ZONES[order[index]].label}!`;
     replayClass(hint, 'show');
-    replayClass(dancerBox, 'spin');
+    replayClass(label, 'pop');
     window.clearTimeout(hintTimer);
     hintTimer = window.setTimeout(() => hint.classList.remove('show'), TIMER.switchHintMs);
   }
@@ -188,8 +186,11 @@ export function createBrushScreen(ctx) {
       watch = zoneWatcher(onZoneChange);
       spotKey = '';
       section.classList.remove('paused');
-      clear(dancerBox);
-      dancerBox.append(drawDancer({ wearing: state.wearing, sequinStates: sequinStatesOf(state), brushing: true, cls: 'brushing' }));
+      if (bgLayer.dataset.bg !== state.background) {
+        clear(bgLayer);
+        bgLayer.append(drawBackground(state.background));
+        bgLayer.dataset.bg = state.background;
+      }
       showZone(0);
       ring.set(0, 0);
       replayClass(go, 'show');

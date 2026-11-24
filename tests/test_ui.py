@@ -148,6 +148,47 @@ def open_parents(page) -> None:
     page.mouse.up()
 
 
+def test_parents_menu_has_back_navigation(app_page):
+    open_parents(app_page)
+    assert active_screen(app_page) == "screen-parents"
+    app_page.click("#screen-parents .btn-back")
+    assert active_screen(app_page) == "screen-start"
+
+
+def test_no_character_while_brushing(app_page):
+    page = app_page
+    page.click("#btn-start")
+    page.clock.run_for(fast_countdown_ms(page) + 100)
+    assert active_screen(page) == "screen-brush"
+    assert page.locator("#screen-brush .dancer").count() == 0
+
+
+def test_confetti_keeps_falling_through_bottom_edge(app_page):
+    page = app_page
+    brush_through(page)
+    assert active_screen(page) == "screen-reward"
+    info = page.evaluate("""() => {
+        const layer = document.querySelector('#screen-reward .confetti-layer');
+        const pieces = [...layer.querySelectorAll('.confetti')];
+        const ls = getComputedStyle(layer);
+        return { fixed: ls.position, falling: layer.classList.contains('fall'),
+                 iterations: pieces.map(p => getComputedStyle(p).animationIterationCount),
+                 names: pieces.map(p => getComputedStyle(p).animationName),
+                 count: pieces.length, height: layer.getBoundingClientRect().height, vh: innerHeight };
+    }""")
+    assert info["fixed"] == "fixed" and info["falling"]
+    assert info["height"] >= info["vh"] - 1, "layer spans the whole display"
+    assert info["count"] >= 12
+    assert set(info["iterations"]) == {"infinite"} and set(info["names"]) == {"fall"}
+    # Keyframe ends below the visible area: inspect the CSS rule.
+    end = page.evaluate("""() => {
+        for (const sheet of document.styleSheets) for (const rule of sheet.cssRules)
+            if (rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'fall') return rule.cssRules[rule.cssRules.length - 1].style.transform;
+        return '';
+    }""")
+    assert "100vh" in end
+
+
 def test_short_tap_does_not_open_parents(app_page):
     app_page.click("#btn-parents")
     app_page.clock.run_for(3100)

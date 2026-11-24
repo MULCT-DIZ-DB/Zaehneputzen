@@ -9,10 +9,10 @@ const PRECACHE = [
   './', './index.html', './manifest.webmanifest', './css/style.css', './fonts/PatrickHand-Regular.ttf',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './js/app.js', './js/config.js', './js/dom.js', './js/sketch.js', './js/art.js', './js/dancer.js', './js/stickers.js',
-  './js/timer.js', './js/storage.js', './js/rewards.js', './js/sequins.js', './js/music.js', './js/wakelock.js', './js/devmode.js', './js/backup.js',
+  './js/timer.js', './js/storage.js', './js/rewards.js', './js/sequins.js', './js/music.js', './js/wakelock.js', './js/devmode.js', './js/backup.js', './js/backgrounds.js',
   './js/screens/base.js', './js/screens/start.js', './js/screens/countdown.js', './js/screens/brush.js',
   './js/screens/reward.js', './js/screens/album.js', './js/screens/dress.js', './js/screens/calendar.js',
-  './js/screens/parents.js', './js/screens/devpanel.js', './js/screens/backuppanel.js',
+  './js/screens/parents.js', './js/screens/devpanel.js', './js/screens/backuppanel.js', './js/screens/backgrounds.js',
 ];
 
 /**

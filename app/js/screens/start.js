@@ -66,6 +66,7 @@ export function createStartScreen(ctx) {
     iconButton('album', TEXT.album, () => ctx.show('album'), '', { id: 'btn-album', showLabel: true }),
     iconButton('kleid', TEXT.dressUp, () => ctx.show('dress'), '', { id: 'btn-dress', showLabel: true }),
     iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
+    iconButton('bild', TEXT.backgrounds, () => ctx.show('backgrounds'), '', { id: 'btn-backgrounds', showLabel: true }),
   ]);
   body.append(parents, devBadge, el('div', { cls: 'start-layout' }, [
     stage,

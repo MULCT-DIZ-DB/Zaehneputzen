@@ -4,7 +4,7 @@
  * Everything is built once; animations only touch transform/opacity via CSS classes.
  * @module art
  */
-import { PALETTE as C, ZONES } from './config.js';
+import { PALETTE as C, ZONES, UI } from './config.js';
 import { svg, svgRoot, inked } from './dom.js';
 import { sketchPath, sketchEllipse, sketchStar, seeded } from './sketch.js';
 
@@ -145,7 +145,8 @@ export function drawGift() {
 }
 
 /**
- * Confetti pieces for the dance party (stars, hearts, notes in soft colours).
+ * Confetti pieces for the dance party. Delays are spread over one fall duration so that,
+ * looping endlessly, they form a steady stream.
  * @param {number} count Number of pieces.
  * @returns {SVGElement[]} Small SVGs, each with its own CSS variables for path and delay.
  */
@@ -157,8 +158,9 @@ export function drawConfetti(count) {
       ? inked(sketchStar(20, 20, 16, 7, 5, 910 + i), colors[i % colors.length], { 'stroke-width': 2 })
       : inked(sketchEllipse(20, 20, 9, 13, 920 + i), colors[i % colors.length], { 'stroke-width': 2 });
     const piece = svgRoot('0 0 40 40', 'confetti', [shape]);
-    piece.setAttribute('style',
-      `left:${Math.round(5 + rnd() * 90)}%;animation-delay:${(rnd() * 1.2).toFixed(2)}s;--drift:${Math.round((rnd() - 0.5) * 120)}px`);
+    const dur = UI.confettiMinSec + rnd() * (UI.confettiMaxSec - UI.confettiMinSec);
+    piece.setAttribute('style', `left:${Math.round(3 + rnd() * 94)}%;animation-duration:${dur.toFixed(2)}s;`
+      + `animation-delay:${((i / count) * UI.confettiMaxSec).toFixed(2)}s;--drift:${Math.round((rnd() - 0.5) * 160)}px`);
     return piece;
   });
 }
@@ -178,6 +180,8 @@ const ICONS = {
     inked(sketchEllipse(17, 31, 4, 4, 17), C.rosa), inked(sketchEllipse(31, 31, 4, 4, 18), C.lavendel)],
   kleid: () => [inked('M18 6 L30 6 L28 18 L40 42 L8 42 L20 18 Z', C.lavendel), inked(sketchEllipse(24, 6, 6, 3, 19), C.rosa)],
   eltern: () => [inked(sketchEllipse(24, 24, 14, 14, 20), C.grau), inked(sketchEllipse(24, 24, 5, 5, 21), C.creme)],
+  bild: () => [inked(sketchRect(5, 9, 38, 30, 25), C.himmel), inked('M7 37 L18 24 L26 31 L32 25 L41 37 Z', C.salbei, { 'stroke-width': 2 }),
+    inked(sketchEllipse(33, 17, 4, 4, 26), C.butter, { 'stroke-width': 2 })],
   pause: () => [inked(sketchRect(12, 8, 9, 32, 22), C.petrol), inked(sketchRect(27, 8, 9, 32, 23), C.petrol)],
   play: () => [inked('M14 8 L38 24 L14 40 Z', C.salbei)],
   kreuz: () => [svg('path', { d: 'M13 13 L35 35 M35 13 L13 35', fill: 'none', stroke: C.rot, 'stroke-width': 8, 'stroke-linecap': 'round' })],

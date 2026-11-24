@@ -4,7 +4,7 @@
  * All functions are pure and return new objects (input state is not changed).
  * @module rewards
  */
-import { REWARDS, STICKERS, OUTFITS, MOVES } from './config.js';
+import { REWARDS, STICKERS, OUTFITS, MOVES, BACKGROUNDS } from './config.js';
 
 /** @typedef {import('./storage.js').State} State */
 /** @typedef {'morgens'|'abends'} Slot */
@@ -14,6 +14,7 @@ import { REWARDS, STICKERS, OUTFITS, MOVES } from './config.js';
  * @property {string|null} sticker
  * @property {string|null} outfit
  * @property {string|null} move
+ * @property {string|null} background
  * @property {number} streak
  */
 
@@ -108,6 +109,18 @@ function nextOutfit(owned, sessions) {
 }
 
 /**
+ * Next background in unlock order if the session count hits the rhythm.
+ * @param {string[]} owned Owned background ids.
+ * @param {number} sessions Session count including the current one.
+ * @returns {string|null}
+ */
+function nextBackground(owned, sessions) {
+  if (sessions % REWARDS.backgroundEverySessions !== 0) return null;
+  const item = BACKGROUNDS.find((b) => !owned.includes(b.id));
+  return item ? item.id : null;
+}
+
+/**
  * Lowest locked dance move whose streak threshold is reached.
  * @param {string[]} owned Owned move ids.
  * @param {number} streak Current streak.
@@ -139,6 +152,7 @@ export function completeSession(state, { date, completed, rng }) {
   const outfit = nextOutfit(state.outfits, sessions);
   const streak = computeStreak(calendar, date);
   const move = nextMove(state.moves, streak);
+  const background = nextBackground(state.backgrounds, sessions);
   const next = {
     ...state,
     calendar,
@@ -146,6 +160,7 @@ export function completeSession(state, { date, completed, rng }) {
     stickers: sticker ? [...state.stickers, sticker] : [...state.stickers],
     outfits: outfit ? [...state.outfits, outfit] : [...state.outfits],
     moves: move ? [...state.moves, move] : [...state.moves],
+    backgrounds: background ? [...state.backgrounds, background] : [...state.backgrounds],
   };
-  return { state: next, reward: { slot, sticker, outfit, move, streak } };
+  return { state: next, reward: { slot, sticker, outfit, move, background, streak } };
 }
