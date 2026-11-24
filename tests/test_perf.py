@@ -15,17 +15,6 @@ FRAME_SAMPLER = """(ms) => new Promise(resolve => {
 })"""
 
 
-@pytest.fixture()
-def chromium_page(playwright, base_url):
-    """Launches a separate Chromium page (CPU throttling needs the Chrome DevTools Protocol)."""
-    browser = playwright.chromium.launch()
-    context = browser.new_context(viewport=config.IPAD_LANDSCAPE, device_scale_factor=config.IPAD_SCALE_FACTOR,
-                                  has_touch=True, locale="de-DE")
-    page = context.new_page()
-    yield page
-    browser.close()
-
-
 def open_game(page, game):
     """Opens the games hub (play window pre-opened in storage) and starts a game round."""
     page.click("#btn-games-start")

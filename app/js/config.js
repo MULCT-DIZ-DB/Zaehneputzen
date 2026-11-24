@@ -240,7 +240,18 @@ export const MUSIC = Object.freeze({
   padGain: 0.05,
   bassGain: 0.09,
   chimeGain: 0.25,
-  pianoGain: 0.32,
+  /** Piano voice: peak level, attack, quiet octave overtone, fade on re-strike, tail after the tone. */
+  pianoGain: 0.22,
+  pianoAttackSec: 0.012,
+  pianoOctaveGain: 0.18,
+  voiceFadeSec: 0.015,
+  pianoTailSec: 0.3,
+  toneStartDelaySec: 0.005,
+  /** Limiter at the end of the chain: no clipping however many tones overlap. */
+  limiterThresholdDb: -6,
+  limiterRatio: 20,
+  limiterAttackSec: 0.002,
+  limiterReleaseSec: 0.15,
   lowpassHz: 2400,
   /** Chord roots (MIDI) for a 4-bar loop: C – Am – F – G. */
   chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],

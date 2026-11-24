@@ -38,7 +38,9 @@ export function buildSong() {
 /** Background music player with chimes. Fails silently where audio is unavailable. */
 export class Music {
   constructor() {
-    /** @type {AudioContext|null} */ this.ctx = null;
+    /** @type {BaseAudioContext|null} */ this.ctx = null;
+    /** @type {Map<number, {oscs: OscillatorNode[], env: GainNode}>} one sounding piano voice per key */
+    this.voices = new Map();
     /** @type {GainNode|null} */ this.master = null;
     /** @type {BiquadFilterNode|null} */ this.filter = null;
     this.enabled = true;
@@ -58,26 +60,46 @@ export class Music {
       if (!this.ctx) {
         const Ctor = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
         if (!Ctor) return;
-        this.ctx = new Ctor();
-        this.filter = this.ctx.createBiquadFilter();
-        this.filter.type = 'lowpass';
-        this.filter.frequency.value = MUSIC.lowpassHz;
-        this.master = this.ctx.createGain();
-        this.filter.connect(this.master);
-        this.master.connect(this.ctx.destination);
-        this.applyVolume();
-        const silent = this.ctx.createBuffer(1, 1, 22050);
-        const src = this.ctx.createBufferSource();
+        const context = new Ctor();
+        this.attach(context);
+        const silent = context.createBuffer(1, 1, 22050);
+        const src = context.createBufferSource();
         src.buffer = silent;
-        src.connect(this.ctx.destination);
+        src.connect(context.destination);
         src.start(0);
       }
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const live = /** @type {AudioContext} */ (this.ctx);
+      if (live.state === 'suspended') live.resume().catch(() => {});
     } catch {
       this.ctx = null;
     }
   }
 
+  /**
+   * Builds the output chain on a context: soft low-pass → volume → limiter → speakers.
+   * The limiter keeps many overlapping tones from clipping (crackling).
+   * Also used with an OfflineAudioContext in the tests.
+   * @param {BaseAudioContext} context Audio context.
+   * @returns {void}
+   */
+  attach(context) {
+    this.ctx = context;
+    this.voices = new Map();
+    this.filter = context.createBiquadFilter();
+    this.filter.type = 'lowpass';
+    this.filter.frequency.value = MUSIC.lowpassHz;
+    this.master = context.createGain();
+    const limiter = context.createDynamicsCompressor();
+    limiter.threshold.value = MUSIC.limiterThresholdDb;
+    limiter.knee.value = 0;
+    limiter.ratio.value = MUSIC.limiterRatio;
+    limiter.attack.value = MUSIC.limiterAttackSec;
+    limiter.release.value = MUSIC.limiterReleaseSec;
+    this.filter.connect(this.master);
+    this.master.connect(limiter);
+    limiter.connect(context.destination);
+    this.applyVolume();
+  }
   /**
    * Updates settings.
    * @param {{music: boolean, volume: number}} settings Parent settings.
@@ -96,19 +118,19 @@ export class Music {
   }
 
   /**
-   * Plays one soft note (music-box, pad, bass, chime or piano timbre).
+   * Plays one soft note (music-box, pad, bass or chime timbre).
    * @param {number} midi MIDI note.
    * @param {number} when Start time (AudioContext seconds).
    * @param {number} dur Length in seconds.
-   * @param {'mel'|'pad'|'bass'|'chime'|'piano'} kind Timbre.
+   * @param {'mel'|'pad'|'bass'|'chime'} kind Timbre.
    * @returns {void}
    */
   note(midi, when, dur, kind) {
     if (!this.ctx || !this.filter) return;
-    const gains = { mel: MUSIC.melodyGain, pad: MUSIC.padGain, bass: MUSIC.bassGain, chime: MUSIC.chimeGain, piano: MUSIC.pianoGain };
+    const gains = { mel: MUSIC.melodyGain, pad: MUSIC.padGain, bass: MUSIC.bassGain, chime: MUSIC.chimeGain };
     const osc = this.ctx.createOscillator();
     const env = this.ctx.createGain();
-    osc.type = kind === 'pad' || kind === 'piano' ? 'triangle' : 'sine';
+    osc.type = kind === 'pad' ? 'triangle' : 'sine';
     osc.frequency.value = midiToHz(midi);
     const peak = gains[kind];
     const attack = kind === 'pad' ? 0.6 : 0.008;
@@ -195,9 +217,47 @@ export class Music {
    */
   tone(midi, durSec) {
     if (!this.ctx) return;
-    this.note(midi, this.ctx.currentTime + 0.01, durSec, 'piano');
+    this.toneAt(midi, this.ctx.currentTime + MUSIC.toneStartDelaySec, durSec);
   }
 
+  /**
+   * Schedules a soft piano tone: sine plus a quiet octave, short attack, natural decay.
+   * A key that is still sounding is faded out quickly first (one voice per key),
+   * so fast repeated taps never pile up or click.
+   * @param {number} midi MIDI note.
+   * @param {number} when Start time (context seconds).
+   * @param {number} durSec Length in seconds.
+   * @returns {void}
+   */
+  toneAt(midi, when, durSec) {
+    if (!this.ctx || !this.filter) return;
+    const old = this.voices.get(midi);
+    if (old) {
+      old.env.gain.setTargetAtTime(0, when, MUSIC.voiceFadeSec);
+      old.oscs.forEach((o) => o.stop(when + MUSIC.voiceFadeSec * 8));
+    }
+    const env = this.ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(MUSIC.pianoGain, when + MUSIC.pianoAttackSec);
+    env.gain.setTargetAtTime(0, when + MUSIC.pianoAttackSec, durSec / 4);
+    const base = this.ctx.createOscillator();
+    base.type = 'sine';
+    base.frequency.value = midiToHz(midi);
+    const octave = this.ctx.createOscillator();
+    octave.type = 'sine';
+    octave.frequency.value = midiToHz(midi + 12);
+    const octaveGain = this.ctx.createGain();
+    octaveGain.gain.value = MUSIC.pianoOctaveGain;
+    base.connect(env);
+    octave.connect(octaveGain);
+    octaveGain.connect(env);
+    env.connect(this.filter);
+    const voice = { oscs: [base, octave], env };
+    this.voices.set(midi, voice);
+    const end = when + durSec + MUSIC.pianoTailSec;
+    voice.oscs.forEach((o) => { o.start(when); o.stop(end); });
+    base.onended = () => { if (this.voices.get(midi) === voice) this.voices.delete(midi); };
+  }
   /** Little fanfare at the end. @returns {void} */
   fanfare() {
     this.chime(MUSIC.fanfareNotes);

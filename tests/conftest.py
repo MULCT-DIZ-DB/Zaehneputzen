@@ -73,6 +73,27 @@ def harness(page, base_url: str):
 
 
 @pytest.fixture()
+def chromium_page(playwright, base_url):
+    """Separate Chromium page: needed for CPU throttling (DevTools) and for Web Audio,
+    which the Windows WebKit build of Playwright lacks (Safari on the iPad has it)."""
+    browser = playwright.chromium.launch()
+    context = browser.new_context(viewport=config.IPAD_LANDSCAPE, device_scale_factor=config.IPAD_SCALE_FACTOR,
+                                  has_touch=True, locale="de-DE")
+    page = context.new_page()
+    yield page
+    browser.close()
+
+
+@pytest.fixture()
+def chromium_harness(chromium_page, base_url):
+    """Empty same-origin Chromium page for importing app modules (like `harness`)."""
+    chromium_page.route(f"{base_url}{config.HARNESS_PATH}", lambda route: route.fulfill(
+        status=200, content_type="text/html", body="<!doctype html><meta charset='utf-8'><title>t</title>"))
+    chromium_page.goto(f"{base_url}{config.HARNESS_PATH}")
+    return chromium_page
+
+
+@pytest.fixture()
 def js(harness) -> Callable[..., Any]:
     """Returns a helper that runs a JS function body with app modules available.
 
