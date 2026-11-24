@@ -221,6 +221,10 @@ export const BACKUP = Object.freeze({
   mime: 'application/json',
   maxBytes: 1000000,
   revokeDelayMs: 10000,
+  /** localStorage key remembering the session count at the last saved backup. */
+  metaKey: 'zahnputz-tanz-letzte-sicherung',
+  /** The start screen asks parents for a backup after this many new sessions (about 5 days). */
+  remindAfterSessions: 10,
 });
 
 /** Developer mode gate: both factors are single digits. */
@@ -292,4 +296,7 @@ export const TEXT = Object.freeze({
   importConfirm: 'Den Fortschritt auf diesem Gerät durch die Sicherung ersetzen?',
   importOk: 'Fortschritt geladen!',
   importBad: 'Diese Datei ist keine gültige Zahnputz-Tanz-Sicherung.',
+  restoreBtn: 'Sicherung laden',
+  backupReminder: 'Eltern: Fortschritt sichern (3 Sek. halten)',
+  backupSafetyHint: 'Der Fortschritt liegt nur auf diesem Gerät. Beim Löschen der Website-Daten oder des Home-Bildschirm-Symbols geht er verloren – die Sicherung in „Dateien“/iCloud Drive speichern.',
 });

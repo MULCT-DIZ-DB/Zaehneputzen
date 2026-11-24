@@ -5,7 +5,7 @@
  * @module backup
  */
 import { BACKUP, SCHEMA_VERSION } from './config.js';
-import { migrate } from './storage.js';
+import { migrate, browserStorage } from './storage.js';
 import { dateKey } from './rewards.js';
 
 /** @typedef {import('./storage.js').State} State */
@@ -51,10 +51,70 @@ export function parseBackup(text) {
 }
 
 /**
+ * True if the state holds anything worth restoring (sessions, gifts or calendar entries).
+ * @param {State} state Real state.
+ * @returns {boolean}
+ */
+export function hasProgress(state) {
+  return state.sessions > 0 || state.stickers.length > 0 || state.outfits.length > 0
+    || Object.keys(state.calendar).length > 0;
+}
+
+/**
+ * Session count stored with the last saved backup (0 if none or unreadable).
+ * @param {import('./storage.js').KeyValueStore} [store] Storage to read.
+ * @returns {number}
+ */
+export function lastBackupSessions(store = browserStorage()) {
+  try {
+    const n = Number(JSON.parse(store.getItem(BACKUP.metaKey) || '{}').sessions);
+    return Number.isInteger(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Remembers that the given state has been backed up.
+ * @param {State} state Backed-up state.
+ * @param {import('./storage.js').KeyValueStore} [store] Storage to write.
+ * @returns {void}
+ */
+export function recordBackup(state, store = browserStorage()) {
+  try {
+    store.setItem(BACKUP.metaKey, JSON.stringify({ sessions: state.sessions }));
+  } catch {
+    /* storage unavailable – the reminder simply shows again */
+  }
+}
+
+/**
+ * True if enough new sessions happened since the last backup to remind the parents.
+ * A lower count than at the last backup (progress reset) counts from zero.
+ * @param {State} state Real state.
+ * @param {number} lastSessions Session count at the last backup.
+ * @returns {boolean}
+ */
+export function needsBackup(state, lastSessions) {
+  const base = lastSessions > state.sessions ? 0 : lastSessions;
+  return state.sessions - base >= BACKUP.remindAfterSessions;
+}
+
+/**
+ * Asks the browser not to evict the app's storage when the device runs low on space.
+ * Does not protect against the user deleting website data.
+ * @returns {void}
+ */
+export function requestPersistentStorage() {
+  const storage = /** @type {any} */ (navigator).storage;
+  if (storage && typeof storage.persist === 'function') storage.persist().catch(() => {});
+}
+
+/**
  * Hands the backup to the user: share sheet where files can be shared (iPad),
  * otherwise a normal download.
  * @param {State} state Real state.
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} False if the user cancelled the share sheet.
  */
 export async function deliverBackup(state) {
   const now = new Date();
@@ -66,9 +126,9 @@ export async function deliverBackup(state) {
     if (nav.canShare({ files: [file] })) {
       try {
         await nav.share({ files: [file], title: name });
-        return;
+        return true;
       } catch (err) {
-        if (err && err.name === 'AbortError') return;
+        if (err && err.name === 'AbortError') return false;
       }
     }
   }
@@ -80,4 +140,5 @@ export async function deliverBackup(state) {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), BACKUP.revokeDelayMs);
+  return true;
 }

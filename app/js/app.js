@@ -4,6 +4,7 @@
  * @module app
  */
 import { loadState, saveState } from './storage.js';
+import { requestPersistentStorage } from './backup.js';
 import { buildIconSprite } from './art.js';
 import { unlockAll, persistable } from './devmode.js';
 import { Music } from './music.js';
@@ -87,6 +88,7 @@ function boot() {
   });
   ctx.show('start');
   registerServiceWorker(fast);
+  requestPersistentStorage();
 }
 
 boot();

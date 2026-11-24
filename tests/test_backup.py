@@ -113,6 +113,122 @@ def test_import_bad_file_keeps_progress(app_page):
     assert page.locator(".sticker-slot.owned").count() == 1
 
 
+def test_has_progress(js):
+    res = js(PRE + """
+        const empty = m.storage.defaultState();
+        const onlyCalendar = m.storage.defaultState(); onlyCalendar.calendar['2026-11-24'] = { morgens: true, abends: false };
+        return [m.backup.hasProgress(empty), m.backup.hasProgress(st), m.backup.hasProgress(onlyCalendar)];
+    """)
+    assert res == [False, True, True]
+
+
+def test_needs_backup_counts_sessions_since_last_backup(js):
+    res = js("""
+        const every = m.config.BACKUP.remindAfterSessions;
+        const at = (n) => { const s = m.storage.defaultState(); s.sessions = n; return s; };
+        return [
+            m.backup.needsBackup(at(every - 1), 0),
+            m.backup.needsBackup(at(every), 0),
+            m.backup.needsBackup(at(every + 3), 4),
+            m.backup.needsBackup(at(2 * every), every),
+            m.backup.needsBackup(at(every), 50),
+        ];
+    """)
+    assert res == [False, True, False, True, True], "a lower count than at the last backup (reset) counts from zero"
+
+
+def test_backup_record_round_trip_and_bad_meta(js):
+    res = js("""
+        const store = m.storage.memoryStorage();
+        const before = m.backup.lastBackupSessions(store);
+        const s = m.storage.defaultState(); s.sessions = 12;
+        m.backup.recordBackup(s, store);
+        const after = m.backup.lastBackupSessions(store);
+        store.setItem(m.config.BACKUP.metaKey, '{kaputt');
+        const broken = m.backup.lastBackupSessions(store);
+        store.setItem(m.config.BACKUP.metaKey, JSON.stringify({ sessions: -4 }));
+        return [before, after, broken, m.backup.lastBackupSessions(store)];
+    """)
+    assert res == [0, 12, 0, 0]
+
+
+def seed_state(page, base_url, sessions: int) -> None:
+    """Stores progress with the given session count and reloads the app."""
+    page.evaluate("""async (n) => {
+        const c = await import('./js/config.js');
+        const s = await import('./js/storage.js');
+        const st = s.defaultState(); st.sessions = n; st.stickers = [c.STICKERS[0].id];
+        s.saveState(st);
+    }""", sessions)
+    page.goto(f"{base_url}/index.html?schnell=1")
+    page.wait_for_selector("#screen-start.active")
+
+
+def hold(page, selector: str, ms: int) -> None:
+    """Presses on an element, lets the fake clock run, then releases."""
+    box = page.locator(selector).bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.mouse.down()
+    page.clock.run_for(ms)
+    page.mouse.up()
+
+
+def test_restore_button_only_without_progress(app_page):
+    page = app_page
+    assert page.is_visible("#btn-restore")
+    finish_session(page)
+    assert not page.is_visible("#btn-restore")
+
+
+def test_restore_from_start_screen(app_page):
+    page = app_page
+    backup = page.evaluate("""async () => {
+        const c = await import('./js/config.js');
+        return JSON.stringify({ kind: c.BACKUP.kind, schema: c.SCHEMA_VERSION, exportedAt: 'x',
+            state: { name: 'Clara', sessions: 3, stickers: c.STICKERS.slice(0, 3).map(s => s.id) } });
+    }""")
+    page.on("dialog", lambda d: d.accept())
+    page.set_input_files("#input-restore", files=[{"name": "s.json", "mimeType": "application/json",
+                                                   "buffer": backup.encode("utf-8")}])
+    page.wait_for_selector("#btn-restore", state="hidden")
+    assert "Clara" in page.inner_text("#greeting")
+    page.click("#btn-album")
+    assert page.locator(".sticker-slot.owned").count() == 3
+    assert not page.console_errors, page.console_errors
+
+
+def test_restore_bad_file_shows_message(app_page):
+    page = app_page
+    with page.expect_event("dialog") as info:
+        page.set_input_files("#input-restore", files=[{"name": "x.json", "mimeType": "application/json",
+                                                       "buffer": b"{kaputt"}])
+    dialog = info.value
+    assert "keine gültige" in dialog.message
+    dialog.accept()
+    assert page.is_visible("#btn-restore")
+
+
+def test_backup_reminder_after_enough_sessions(app_page, base_url, tmp_path):
+    page = app_page
+    assert not page.is_visible("#btn-backup-reminder")
+    every = page.evaluate("import('./js/config.js').then(c => c.BACKUP.remindAfterSessions)")
+    seed_state(page, base_url, every)
+    assert page.is_visible("#btn-backup-reminder")
+    page.evaluate("Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true })")
+    hold(page, "#btn-backup-reminder", 500)
+    assert page.is_visible("#btn-backup-reminder"), "a short press does nothing"
+    with page.expect_download() as info:
+        hold(page, "#btn-backup-reminder", 3100)
+    target = tmp_path / "b.json"
+    info.value.save_as(target)
+    assert json.loads(target.read_text(encoding="utf-8"))["state"]["sessions"] == every
+    page.wait_for_selector("#btn-backup-reminder", state="hidden")
+    page.goto(f"{base_url}/index.html?schnell=1")
+    page.wait_for_selector("#screen-start.active")
+    assert not page.is_visible("#btn-backup-reminder"), "stays hidden after the backup"
+    assert not page.console_errors, page.console_errors
+
+
 def test_import_cancelled_keeps_progress(app_page):
     page = app_page
     page.on("dialog", lambda d: d.dismiss())

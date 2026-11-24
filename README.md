@@ -11,6 +11,8 @@ Eine ruhige, gezeichnete Zahnputz-App für Kinder – gedacht als flüssige Alte
 
 Alles bleibt auf dem Gerät (localStorage) – es werden keine Daten verschickt.
 
+**Sicherung:** Beim Löschen der Website-Daten oder des Home-Bildschirm-Symbols geht der Fortschritt verloren. Deshalb erscheint nach je 10 Putzrunden unten links „Eltern: Fortschritt sichern“ (3 Sekunden halten → Datei in „Dateien“/iCloud Drive speichern). Ist kein Fortschritt vorhanden, zeigt der Startbildschirm „Sicherung laden“ zum Wiederherstellen. Export/Import gibt es zusätzlich im Eltern-Menü.
+
 ## Projektaufbau
 
 ```
@@ -38,7 +40,12 @@ py -3 -m venv .venv
 .venv\Scripts\python tools\serve.py
 ```
 
-Die Ausgabe zeigt die Adresse fürs iPad (z. B. `http://192.168.178.20:8080`). iPad und Laptop müssen im selben WLAN sein; beim ersten Start fragt die Windows-Firewall – „Private Netzwerke“ erlauben.
+Die Ausgabe zeigt die Adresse fürs iPad (z. B. `http://192.168.178.20:8080`). iPad und Laptop müssen im selben WLAN sein; beim ersten Start fragt die Windows-Firewall – „Private Netzwerke“ erlauben. Kommt keine Abfrage und das Handy/iPad erreicht die App nicht, einmalig in einer Admin-PowerShell freigeben:
+
+```
+New-NetFirewallRule -DisplayName "Zahnputz-App Dev-Server (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
+```
+
 Über `http://` im LAN funktionieren alle Funktionen außer dem Offline-Modus.
 
 Schnelltest-Modus: `…/index.html?schnell=1` (20 s Putzzeit, 1 s Countdown).
@@ -51,13 +58,17 @@ Schnelltest-Modus: `…/index.html?schnell=1` (20 s Putzzeit, 1 s Countdown).
 
 Enthält Logik-Tests (Datentypen, Grenzfälle wie Schaltjahr, Zeitumstellung, Monatswechsel, kaputte Speicherdaten), einen kompletten Durchlauf in WebKit mit künstlicher Uhr und einen Performance-Test mit 4-fach gedrosselter CPU.
 
-## Dauerhaft veröffentlichen (kostenlos)
+## Veröffentlichen (GitHub Pages)
 
-Die FRITZ!Box kann keine Webseiten mit HTTPS ausliefern – HTTPS ist aber für den Offline-Modus nötig. Kostenlose Möglichkeiten:
+Die App läuft unter **<https://mulct-diz-db.github.io/Zaehneputzen/>** (HTTPS, daher funktioniert auch der Offline-Modus). Schritt-für-Schritt-Anleitung: [docs/DEPLOY.md](docs/DEPLOY.md).
 
-1. **Netlify Drop** (am einfachsten): auf <https://app.netlify.com/drop> den Ordner **`app`** hineinziehen (kostenloses Konto). Für Updates den Ordner erneut hineinziehen.
-2. **Cloudflare Pages**: „Direct Upload“ des Ordners `app`.
-3. **GitHub Pages**: im Repository unter *Settings → Pages* veröffentlichen (bei kostenlosem Konto muss das Repository öffentlich sein). Dann ist die App unter `…/app/` erreichbar.
+- Jeder Push auf `main` veröffentlicht den Ordner `app/` automatisch (Workflow `.github/workflows/pages.yml`, ca. 1 Minute; Status im Tab *Actions*).
+- Einmalige Einrichtung: *Settings → Pages → Source* = **GitHub Actions**. Das Repository muss bei kostenlosem Konto öffentlich sein.
+- GitHub Pages cacht bis zu 10 Minuten – danach die App auf dem iPad online schließen und neu öffnen.
+- **Neue Dateien in `app/`** zusätzlich in die `PRECACHE`-Liste in `app/sw.js` eintragen, sonst fehlen sie offline.
+- Der Fortschritt wird pro Adresse gespeichert: beim Wechsel von der LAN-Adresse zu GitHub Pages im Eltern-Menü exportieren und dort importieren.
+
+Alternativen ohne GitHub: **Netlify Drop** (<https://app.netlify.com/drop>, Ordner `app` hineinziehen) oder **Cloudflare Pages** („Direct Upload“ des Ordners `app`).
 
 ## Auf dem iPad installieren
 

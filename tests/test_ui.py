@@ -42,7 +42,8 @@ def test_start_screen(app_page):
 
 def test_buttons_are_big_enough(app_page):
     sizes = app_page.eval_on_selector_all(
-        "#screen-start button", "els => els.map(e => { const r = e.getBoundingClientRect(); return [e.id, r.width, r.height]; })")
+        "#screen-start button",
+        "els => els.filter(e => !e.hidden).map(e => { const r = e.getBoundingClientRect(); return [e.id, r.width, r.height]; })")
     assert sizes
     for bid, w, h in sizes:
         assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, bid

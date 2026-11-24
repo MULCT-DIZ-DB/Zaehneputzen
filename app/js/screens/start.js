@@ -3,13 +3,15 @@
  * Start screen: greeting, swaying dancer, start button, menu, hidden parent button.
  * @module screens/start
  */
-import { TEXT, UI } from '../config.js';
+import { TEXT, UI, BACKUP } from '../config.js';
 import { el, clear } from '../dom.js';
 import { drawDancer } from '../dancer.js';
 import { computeStreak } from '../rewards.js';
 import { decodeStates } from '../sequins.js';
 import { SEQUIN_POINTS } from '../dancer.js';
+import { hasProgress, needsBackup, lastBackupSessions } from '../backup.js';
 import { makeScreen, iconButton, textButton } from './base.js';
+import { applyBackupFile, saveBackup } from './backuppanel.js';
 
 /** @typedef {import('./base.js').AppContext} AppContext */
 
@@ -45,6 +47,27 @@ export function onLongPress(node, ms, onHold) {
 }
 
 /**
+ * Calls `onRelease` when the finger is lifted after holding for at least `ms`.
+ * Acting on release (a user gesture) lets the handler open the iOS share sheet.
+ * @param {HTMLElement} node Target element.
+ * @param {number} ms Minimum hold duration.
+ * @param {() => void} onRelease Called on a long enough hold.
+ * @returns {void}
+ */
+export function onHoldRelease(node, ms, onRelease) {
+  let since = 0;
+  const reset = () => { since = 0; node.classList.remove('holding'); };
+  node.addEventListener('pointerdown', () => { since = Date.now(); node.classList.add('holding'); });
+  node.addEventListener('pointerup', () => {
+    const held = since > 0 && Date.now() - since >= ms;
+    reset();
+    if (held) onRelease();
+  });
+  ['pointerleave', 'pointercancel'].forEach((ev) => node.addEventListener(ev, reset));
+  node.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+/**
  * Creates the start screen.
  * @param {AppContext} ctx App context.
  * @returns {import('./base.js').Screen}
@@ -68,16 +91,36 @@ export function createStartScreen(ctx) {
     iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
     iconButton('bild', TEXT.backgrounds, () => ctx.show('backgrounds'), '', { id: 'btn-backgrounds', showLabel: true }),
   ]);
-  body.append(parents, devBadge, el('div', { cls: 'start-layout' }, [
-    stage,
-    el('div', { cls: 'start-panel' }, [greeting, el('p', { cls: 'subtitle', text: TEXT.ready }), streak, startBtn, menu]),
-  ]));
+  const reminder = textButton(TEXT.backupReminder, () => {}, 'btn-small btn-reminder', 'btn-backup-reminder');
+  onHoldRelease(reminder, UI.parentHoldMs, () => {
+    saveBackup(ctx).then((saved) => { if (saved) reminder.hidden = true; });
+  });
+  const restoreInput = /** @type {HTMLInputElement} */ (el('input', { id: 'input-restore', cls: 'visually-hidden',
+    attrs: { type: 'file', accept: `${BACKUP.mime},.json` } }));
+  const restore = el('label', { cls: 'btn btn-small btn-restore', id: 'btn-restore',
+    attrs: { for: 'input-restore' }, text: TEXT.restoreBtn });
+  restoreInput.addEventListener('change', async () => {
+    const file = restoreInput.files && restoreInput.files[0];
+    restoreInput.value = '';
+    if (!file) return;
+    const outcome = await applyBackupFile(ctx, file);
+    if (outcome === 'bad') window.alert(TEXT.importBad);
+    if (outcome === 'ok') ctx.show('start');
+  });
+  body.append(parents, devBadge, el('div', { cls: 'start-backup' }, [reminder, restore, restoreInput]),
+    el('div', { cls: 'start-layout' }, [
+      stage,
+      el('div', { cls: 'start-panel' }, [greeting, el('p', { cls: 'subtitle', text: TEXT.ready }), streak, startBtn, menu]),
+    ]));
 
   return {
     name: 'start',
     el: section,
     enter() {
       const state = ctx.getState();
+      const saved = ctx.getSavedState();
+      restore.hidden = hasProgress(saved);
+      reminder.hidden = !needsBackup(saved, lastBackupSessions());
       devBadge.hidden = !ctx.isDevMode();
       greeting.textContent = state.name ? `${TEXT.greeting} ${state.name}!` : `${TEXT.greeting}!`;
       const days = computeStreak(state.calendar, new Date());
