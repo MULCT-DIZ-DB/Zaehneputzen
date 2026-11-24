@@ -6,7 +6,7 @@
  */
 import {
   STORAGE_KEY, SCHEMA_VERSION, MAX_NAME_LENGTH, DEFAULT_SETTINGS, TIMER, ZONE_ORDERS, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
-  BACKGROUNDS,
+  BACKGROUNDS, GAMES,
 } from './config.js';
 
 /**
@@ -24,6 +24,8 @@ import {
  * @property {Object<string, DayEntry>} calendar Date key (YYYY-MM-DD) → day entry.
  * @property {string[]} backgrounds Unlocked brushing backgrounds.
  * @property {string} background Selected brushing background.
+ * @property {number} playUntil Epoch ms until which the mini games are open (0 = closed).
+ * @property {{danceBest: number, sugarBest: number}} gameStats Personal bests in the mini games.
  * @property {Settings} settings
  */
 
@@ -51,6 +53,8 @@ export function defaultState() {
     calendar: {},
     backgrounds: [BACKGROUNDS[0].id],
     background: BACKGROUNDS[0].id,
+    playUntil: 0,
+    gameStats: { danceBest: 0, sugarBest: 0 },
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -131,7 +135,27 @@ function cleanSettings(raw) {
     zoneOrder: typeof s.zoneOrder === 'string' && orders.includes(s.zoneOrder) ? s.zoneOrder : DEFAULT_SETTINGS.zoneOrder,
     music: typeof s.music === 'boolean' ? s.music : DEFAULT_SETTINGS.music,
     volume: clampNumber(s.volume, 0, 1, DEFAULT_SETTINGS.volume),
+    playMinutes: Math.round(clampNumber(s.playMinutes, GAMES.minMinutes, GAMES.maxMinutes, DEFAULT_SETTINGS.playMinutes)),
   };
+}
+
+/**
+ * Non-negative whole number, or 0.
+ * @param {unknown} v Raw value.
+ * @returns {number}
+ */
+function cleanCount(v) {
+  return Number.isInteger(v) && Number(v) >= 0 ? Number(v) : 0;
+}
+
+/**
+ * Validates the mini game personal bests.
+ * @param {unknown} raw Raw stats.
+ * @returns {{danceBest: number, sugarBest: number}}
+ */
+function cleanGameStats(raw) {
+  const g = isObject(raw) ? raw : {};
+  return { danceBest: cleanCount(g.danceBest), sugarBest: cleanCount(g.sugarBest) };
 }
 
 /**
@@ -198,6 +222,8 @@ export function validateState(raw) {
     calendar: cleanCalendar(r.calendar),
     backgrounds,
     background,
+    playUntil: typeof r.playUntil === 'number' && Number.isFinite(r.playUntil) && r.playUntil >= 0 ? r.playUntil : 0,
+    gameStats: cleanGameStats(r.gameStats),
     settings: cleanSettings(r.settings),
   };
 }

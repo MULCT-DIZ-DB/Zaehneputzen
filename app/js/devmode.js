@@ -10,7 +10,7 @@ import { DEV, STICKERS, OUTFITS, MOVES, BACKGROUNDS } from './config.js';
 /** @typedef {{a: number, b: number}} Challenge */
 
 /** Fields that may be saved while developer mode is active. */
-const EDITABLE_FIELDS = /** @type {const} */ (['name', 'settings', 'wearing', 'sequins', 'background']);
+const EDITABLE_FIELDS = /** @type {const} */ (['name', 'settings', 'wearing', 'sequins', 'background', 'playUntil', 'gameStats']);
 
 /**
  * Creates a multiplication task with two single-digit factors.
