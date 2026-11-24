@@ -20,23 +20,8 @@ export const SEQUIN_AREAS = Object.freeze({
 
 /** Sequin positions per outfit, computed once. */
 export const SEQUIN_POINTS = Object.freeze(Object.fromEntries(
-  Object.entries(SEQUIN_AREAS).map(([id, poly]) => [id, layoutInPolygon(inset(poly, SEQUINS.radius), SEQUINS.spacing)]),
+  Object.entries(SEQUIN_AREAS).map(([id, poly]) => [id, layoutInPolygon(poly, SEQUINS.spacing, SEQUINS.edgeMargin)]),
 ));
-
-/**
- * Shrinks a polygon towards its centre so sequins stay inside the outline.
- * @param {Point[]} poly Polygon.
- * @param {number} by Distance.
- * @returns {Point[]}
- */
-function inset(poly, by) {
-  const cx = poly.reduce((s, p) => s + p.x, 0) / poly.length;
-  const cy = poly.reduce((s, p) => s + p.y, 0) / poly.length;
-  return poly.map((p) => {
-    const d = Math.hypot(p.x - cx, p.y - cy) || 1;
-    return { x: p.x - ((p.x - cx) / d) * by, y: p.y - ((p.y - cy) / d) * by };
-  });
-}
 
 /**
  * A limb drawn as a dark outline stroke with a skin-coloured stroke on top.

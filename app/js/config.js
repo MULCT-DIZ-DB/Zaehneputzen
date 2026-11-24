@@ -191,9 +191,12 @@ export const MUSIC = Object.freeze({
 
 /** Flip sequin behaviour. */
 export const SEQUINS = Object.freeze({
-  spacing: 9,
-  radius: 4.2,
-  touchRadius: 10,
+  spacing: 8.5,
+  radius: 4,
+  /** Sequins keep this distance (dancer units) from the clothing outline – edge sequins are hard to hit. */
+  edgeMargin: 6.5,
+  /** Fingertip-sized touch radius (dancer units, ≈ 18 px on the iPad = ~36 px contact). Larger would flip the whole top. */
+  touchRadius: 12,
   maxConcurrentFlips: 15,
   flipMs: 220,
 });
@@ -244,6 +247,7 @@ export const TEXT = Object.freeze({
   parentsHint: 'Für Eltern: 3 Sekunden gedrückt halten',
   flipAll: 'Alle umdrehen',
   flipHint: 'Streich über die Pailletten!',
+  resetSequins: 'Alle zurück',
   streak: 'Tage in Folge',
   noGiftNow: 'Geschenke gibt es wieder beim nächsten Zähneputzen.',
   next: 'Weiter',

@@ -6,7 +6,7 @@
 import { TEXT, OUTFITS, OUTFIT_SLOTS, SEQUINS, MOVES } from '../config.js';
 import { el, clear } from '../dom.js';
 import { drawDancer, drawOutfitPreview, SEQUIN_POINTS } from '../dancer.js';
-import { createIndex, strokeFlips, encodeStates, flipAll } from '../sequins.js';
+import { createIndex, strokeFlips, encodeStates, flipAll, resetStates } from '../sequins.js';
 import { makeScreen, textButton } from './base.js';
 import { sequinStatesOf } from './start.js';
 
@@ -36,8 +36,11 @@ export function createDressScreen(ctx) {
   const stage = el('div', { cls: 'dress-stage' });
   const wardrobe = el('div', { cls: 'wardrobe' });
   const flipHint = el('p', { cls: 'flip-hint', text: TEXT.flipHint });
-  const flipBtn = textButton(TEXT.flipAll, () => flipEverything(), 'btn-small', 'btn-flip-all');
-  body.append(el('div', { cls: 'dress-layout' }, [el('div', { cls: 'dress-left' }, [stage, flipHint, flipBtn]), wardrobe]));
+  const sequinButtons = el('div', { cls: 'sequin-buttons' }, [
+    textButton(TEXT.flipAll, () => changeAll(flipAll), 'btn-small', 'btn-flip-all'),
+    textButton(TEXT.resetSequins, () => changeAll(resetStates), 'btn-small', 'btn-sequins-reset'),
+  ]);
+  body.append(el('div', { cls: 'dress-layout' }, [el('div', { cls: 'dress-left' }, [stage, flipHint, sequinButtons]), wardrobe]));
 
   /** @type {Object<string, boolean[]>} */ let states = {};
   /** @type {SVGElement|null} */ let dancerSvg = null;
@@ -89,11 +92,15 @@ export function createDressScreen(ctx) {
     });
   }
 
-  /** "Alle umdrehen" button. @returns {void} */
-  function flipEverything() {
+  /**
+   * Applies a whole-pattern change to all worn sequin outfits ("Alle umdrehen" / "Alle zurück").
+   * @param {(states: boolean[]) => boolean[]} transform Pure function from sequins.js.
+   * @returns {void}
+   */
+  function changeAll(transform) {
     wornSequins().forEach((id) => {
-      const next = flipAll(states[id]);
-      applyFlips(id, next.map((value, i) => ({ i, value })));
+      const next = transform(states[id]);
+      applyFlips(id, next.map((value, i) => ({ i, value })).filter(({ i, value }) => states[id][i] !== value));
     });
     saveSequins();
   }
@@ -106,6 +113,11 @@ export function createDressScreen(ctx) {
       const m = root.getScreenCTM();
       inverse = m ? m.inverse() : null;
       last = inverse ? toSvg(root, e, inverse) : null;
+      try {
+        root.setPointerCapture(e.pointerId); // the stroke continues when the finger leaves the dancer
+      } catch {
+        /* capture not supported – stroke still works inside the dancer */
+      }
     });
     root.addEventListener('pointermove', (e) => {
       if (!last || !inverse) return;
@@ -114,7 +126,7 @@ export function createDressScreen(ctx) {
       last = p;
     });
     const end = () => { if (last) saveSequins(); last = null; };
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => root.addEventListener(ev, end));
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => root.addEventListener(ev, end));
   }
 
   /** Redraws dancer and wardrobe. @returns {void} */
@@ -129,7 +141,7 @@ export function createDressScreen(ctx) {
     bindStroke(dancer);
     const hasSequins = wornSequins().length > 0;
     flipHint.hidden = !hasSequins;
-    flipBtn.hidden = !hasSequins;
+    sequinButtons.hidden = !hasSequins;
     renderWardrobe(state);
   }
 

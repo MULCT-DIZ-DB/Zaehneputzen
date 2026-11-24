@@ -25,22 +25,47 @@ function insidePolygon(p, poly) {
 }
 
 /**
+ * Shortest distance from a point to the outline of a polygon.
+ * @param {Point} p Point.
+ * @param {Point[]} poly Polygon corners.
+ * @returns {number}
+ */
+export function edgeDistance(p, poly) {
+  let best = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
+    const a = poly[j];
+    const b = poly[i];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+    best = Math.min(best, Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)));
+  }
+  return best;
+}
+
+/**
  * Places sequins on a staggered grid inside a polygon (like scales).
+ * With a margin, only points at least that far from the outline are kept
+ * (sequins right at the edge are hard to hit with a finger).
  * @param {Point[]} poly Outline of the clothing part.
  * @param {number} spacing Distance between sequins.
+ * @param {number} [margin] Minimum distance from the outline.
  * @returns {Point[]}
  */
-export function layoutInPolygon(poly, spacing) {
+export function layoutInPolygon(poly, spacing, margin = 0) {
   const xs = poly.map((p) => p.x);
   const ys = poly.map((p) => p.y);
   const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
   const points = [];
   let row = 0;
-  for (let y = minY; y <= maxY + 1e-9; y += spacing * 0.87, row += 1) {
+  for (let y = minY + margin; y <= maxY + 1e-9; y += spacing * 0.87, row += 1) {
     const offset = row % 2 ? spacing / 2 : 0;
-    for (let x = minX + offset; x <= maxX + 1e-9; x += spacing) {
+    for (let x = minX + margin + offset; x <= maxX + 1e-9; x += spacing) {
       const p = { x, y };
-      if (insidePolygon(p, poly) || poly.some((c) => Math.hypot(c.x - x, c.y - y) < 1e-6)) points.push(p);
+      const onCorner = poly.some((c) => Math.hypot(c.x - x, c.y - y) < 1e-6);
+      const inside = insidePolygon(p, poly) || (margin === 0 && onCorner);
+      if (inside && (margin === 0 || edgeDistance(p, poly) >= margin)) points.push(p);
     }
   }
   return points;
@@ -139,7 +164,16 @@ export function decodeStates(code, count) {
 }
 
 /**
- * Turns every sequin over.
+ * Shows the front side of every sequin.
+ * @param {boolean[]} states Sequin states.
+ * @returns {boolean[]}
+ */
+export function resetStates(states) {
+  return states.map(() => false);
+}
+
+/**
+ * Turns every sequin over (inverts the pattern).
  * @param {boolean[]} states Sequin states.
  * @returns {boolean[]}
  */

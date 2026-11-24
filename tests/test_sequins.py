@@ -77,3 +77,39 @@ def test_encode_decode_round_trip(js):
 
 def test_flip_all(js):
     assert js("return m.sequins.flipAll([true, false, true]);") == [False, True, False]
+
+
+def test_reset_shows_front(js):
+    assert js("return m.sequins.resetStates([true, false, true]);") == [False, False, False]
+
+
+def test_edge_distance(js):
+    res = js("""
+        const sq = [{x:0,y:0},{x:100,y:0},{x:100,y:100},{x:0,y:100}];
+        return [m.sequins.edgeDistance({x:50,y:50}, sq), m.sequins.edgeDistance({x:10,y:50}, sq),
+                m.sequins.edgeDistance({x:3,y:2}, sq)];
+    """)
+    assert res == [50, 10, 2]
+
+
+def test_layout_keeps_margin_from_edges(js):
+    res = js("""
+        const sq = [{x:0,y:0},{x:100,y:0},{x:100,y:100},{x:0,y:100}];
+        const pts = m.sequins.layoutInPolygon(sq, 10, 12);
+        return [pts.length, Math.min(...pts.map(p => m.sequins.edgeDistance(p, sq)))];
+    """)
+    count, min_dist = res
+    assert count > 20 and min_dist >= 12
+
+
+def test_dancer_sequins_away_from_clothing_edges(js):
+    """Real outfit patches: every sequin keeps the configured margin from the outline."""
+    res = js("""
+        const d = await import('./js/dancer.js');
+        return Object.entries(d.SEQUIN_AREAS).map(([id, poly]) => [id, d.SEQUIN_POINTS[id].length,
+            Math.min(...d.SEQUIN_POINTS[id].map(p => m.sequins.edgeDistance(p, poly)))]);
+    """)
+    margin = js("return m.config.SEQUINS.edgeMargin;")
+    for outfit, count, min_dist in res:
+        assert count >= 15, outfit
+        assert min_dist >= margin - 1e-9, outfit
