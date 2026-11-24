@@ -13,6 +13,7 @@ import { hasProgress, needsBackup, lastBackupSessions } from '../backup.js';
 import { makeScreen, iconButton, textButton } from './base.js';
 import { playOpen, playLabel } from './gamekit.js';
 import { applyBackupFile, saveBackup } from './backuppanel.js';
+import { createMathGate } from './mathgate.js';
 
 /** @typedef {import('./base.js').AppContext} AppContext */
 
@@ -27,24 +28,28 @@ export function sequinStatesOf(state) {
 }
 
 /**
- * Attaches a long-press handler (hold for `ms`).
- * @param {HTMLElement} node Target element.
- * @param {number} ms Hold duration.
- * @param {() => void} onHold Called after holding long enough.
- * @returns {void}
+ * Overlay asking adults for a multiplication before the parent menu opens.
+ * @param {AppContext} ctx App context.
+ * @returns {{el: HTMLElement, open: () => void}}
  */
-export function onLongPress(node, ms, onHold) {
-  let timer = 0;
-  const cancel = () => {
-    window.clearTimeout(timer);
-    node.classList.remove('holding');
+function parentsGate(ctx) {
+  const gate = createMathGate('gate', () => { root.hidden = true; ctx.show('parents'); });
+  const root = el('div', { cls: 'parents-gate', id: 'parents-gate', attrs: { role: 'dialog' } }, [
+    el('div', { cls: 'gate-card' }, [
+      el('p', { cls: 'gate-title', text: TEXT.gateTitle }),
+      gate.el,
+      textButton(TEXT.gateCancel, () => { root.hidden = true; }, 'btn-small', 'btn-gate-cancel'),
+    ]),
+  ]);
+  root.hidden = true;
+  return {
+    el: root,
+    open() {
+      gate.reset();
+      root.hidden = false;
+      gate.focus();
+    },
   };
-  node.addEventListener('pointerdown', () => {
-    cancel();
-    node.classList.add('holding');
-    timer = window.setTimeout(() => { cancel(); onHold(); }, ms);
-  });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => node.addEventListener(ev, cancel));
 }
 
 /**
@@ -79,8 +84,8 @@ export function createStartScreen(ctx) {
   const streak = el('p', { cls: 'streak-badge' });
   const devBadge = el('span', { cls: 'dev-badge', id: 'dev-badge', text: TEXT.devBadge });
   const stage = el('div', { cls: 'stage' });
-  const parents = iconButton('eltern', TEXT.parentsHint, () => {}, 'btn-parents', { id: 'btn-parents' });
-  onLongPress(parents, UI.parentHoldMs, () => ctx.show('parents'));
+  const gate = parentsGate(ctx);
+  const parents = iconButton('eltern', TEXT.parentsHint, () => gate.open(), 'btn-parents', { id: 'btn-parents' });
   const startBtn = textButton(TEXT.start, () => {
     ctx.music.unlock();
     ctx.keeper.enable();
@@ -111,6 +116,7 @@ export function createStartScreen(ctx) {
     if (outcome === 'bad') window.alert(TEXT.importBad);
     if (outcome === 'ok') ctx.show('start');
   });
+  section.append(gate.el);
   body.append(parents, devBadge, el('div', { cls: 'start-backup' }, [reminder, restore, restoreInput]),
     el('div', { cls: 'start-layout' }, [
       stage,
@@ -121,6 +127,7 @@ export function createStartScreen(ctx) {
     name: 'start',
     el: section,
     enter() {
+      gate.el.hidden = true;
       const state = ctx.getState();
       const saved = ctx.getSavedState();
       restore.hidden = hasProgress(saved);

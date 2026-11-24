@@ -43,7 +43,7 @@ def test_start_screen(app_page):
 def test_buttons_are_big_enough(app_page):
     sizes = app_page.eval_on_selector_all(
         "#screen-start button",
-        "els => els.filter(e => !e.hidden).map(e => { const r = e.getBoundingClientRect(); return [e.id, r.width, r.height]; })")
+        "els => els.filter(e => e.offsetParent !== null).map(e => { const r = e.getBoundingClientRect(); return [e.id, r.width, r.height]; })")
     assert sizes
     for bid, w, h in sizes:
         assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, bid
@@ -55,12 +55,13 @@ def test_full_brushing_flow_with_zone_changes(app_page):
     assert active_screen(page) == "screen-countdown"
     page.clock.run_for(fast_countdown_ms(page) + 100)
     assert active_screen(page) == "screen-brush"
-    zone_ms = fast_total_ms(page) // 4
+    zone_ms = fast_total_ms(page) // 6 + 1
     labels = []
-    for _ in range(4):
+    for _ in range(6):
         labels.append(page.inner_text("#zone-label"))
         page.clock.run_for(zone_ms)
-    assert labels == ["oben links", "oben rechts", "unten links", "unten rechts"]
+    assert labels == ["Kauflächen unten", "Kauflächen oben", "Außenflächen unten", "Außenflächen oben",
+                      "Innenflächen unten", "Innenflächen oben"], "KAI in 6 steps is the default"
     page.clock.run_for(500)
     assert active_screen(page) == "screen-reward"
     page.click("#gift-box")
@@ -81,7 +82,7 @@ def test_pause_stops_time(app_page):
     page.click("#btn-pause")
     page.clock.run_for(fast_total_ms(page) * 2)
     assert active_screen(page) == "screen-brush"
-    assert page.inner_text("#zone-label") == "oben links"
+    assert page.inner_text("#zone-label") == "Kauflächen unten"
     assert not page.is_visible("#btn-pause")
     page.click("#btn-resume")
     page.clock.run_for(fast_total_ms(page) + 500)
@@ -140,13 +141,18 @@ def test_second_session_same_slot_gives_no_gift(app_page):
     assert page.locator(".sticker-slot.owned").count() == 1
 
 
+def solve_gate(page, prefix) -> None:
+    """Answers a multiplication gate (ids ``<prefix>-question``, ``input-<prefix>``, ``btn-<prefix>-check``)."""
+    a = int(page.get_attribute(f"#{prefix}-question", "data-a"))
+    b = int(page.get_attribute(f"#{prefix}-question", "data-b"))
+    page.fill(f"#input-{prefix}", str(a * b))
+    page.click(f"#btn-{prefix}-check")
+
+
 def open_parents(page) -> None:
-    """Opens the hidden parent menu with a long press."""
-    box = page.locator("#btn-parents").bounding_box()
-    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-    page.mouse.down()
-    page.clock.run_for(3100)
-    page.mouse.up()
+    """Opens the parent menu: tap the parents icon and solve the multiplication."""
+    page.click("#btn-parents")
+    solve_gate(page, "gate")
 
 
 def test_parents_menu_has_back_navigation(app_page):
@@ -190,10 +196,27 @@ def test_confetti_keeps_falling_through_bottom_edge(app_page):
     assert "100vh" in end
 
 
-def test_short_tap_does_not_open_parents(app_page):
-    app_page.click("#btn-parents")
-    app_page.clock.run_for(3100)
-    assert active_screen(app_page) == "screen-start"
+def test_parents_gate_needs_the_right_answer(app_page):
+    page = app_page
+    page.click("#btn-parents")
+    assert page.is_visible("#parents-gate") and active_screen(page) == "screen-start"
+    question = page.inner_text("#gate-question")
+    assert "×" in question
+    a = int(page.get_attribute("#gate-question", "data-a"))
+    b = int(page.get_attribute("#gate-question", "data-b"))
+    assert 2 <= a <= 9 and 2 <= b <= 9
+    page.fill("#input-gate", str(a * b + 1))
+    page.click("#btn-gate-check")
+    assert active_screen(page) == "screen-start" and page.is_visible("#gate-wrong")
+    page.click("#btn-gate-cancel")
+    assert not page.is_visible("#parents-gate")
+    page.clock.run_for(5000)
+    assert active_screen(page) == "screen-start", "no more 3-second hold"
+    open_parents(page)
+    assert active_screen(page) == "screen-parents"
+    page.click("#btn-parents-close")
+    page.click("#btn-parents")
+    assert page.input_value("#input-gate") == "", "fresh task every time"
 
 
 def test_parent_menu_sets_name(app_page):
