@@ -54,13 +54,13 @@ def test_broken_json_gives_defaults(js):
 
 def test_wrong_types_are_repaired(js):
     res = js("""
-        const raw = { schema: 1, name: 42, sessions: 'viele', stickers: 'x', outfits: [1, 'krone', null],
+        const raw = { schema: 1, name: 42, sessions: 'viele', stickers: 'x', outfits: [1, 'glitzer-krone', null],
                       moves: [], wearing: {}, calendar: [], sequins: { a: 5, b: '0110' },
                       settings: { totalSec: 9999, zoneOrder: 'gibtsnicht', music: 'ja', volume: 7 } };
         return m.storage.validateState(raw);
     """)
     assert res["name"] == "" and res["sessions"] == 0
-    assert res["stickers"] == [] and res["outfits"] == ["krone"]
+    assert res["stickers"] == [] and res["outfits"] == ["glitzer-krone"]
     assert res["moves"] == [js("return m.config.MOVES[0].id;")]
     assert res["wearing"] == [] and res["calendar"] == {}
     assert res["sequins"] == {"b": "0110"}

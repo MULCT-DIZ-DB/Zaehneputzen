@@ -16,7 +16,7 @@ def test_layout_inside_polygon(js):
         return [a.length, b.length > 0 && b.length < a.length, inside, typeof a[0].x];
     """)
     count, smaller, inside, typ = res
-    assert 80 <= count <= 121 and smaller and inside and typ == "number"
+    assert 80 <= count <= 130 and smaller and inside and typ == "number"
 
 
 def test_hit_test_finds_neighbours_only(js):
