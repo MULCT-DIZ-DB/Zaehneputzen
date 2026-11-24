@@ -111,5 +111,33 @@ def test_dancer_sequins_away_from_clothing_edges(js):
     """)
     margin = js("return m.config.SEQUINS.edgeMargin;")
     for outfit, count, min_dist in res:
-        assert count >= 15, outfit
+        assert count >= 12, outfit  # top: only the part between the arms is visible
         assert min_dist >= margin - 1e-9, outfit
+
+def test_sequins_not_covered_by_arms_or_top(js):
+    """No sequin may be hidden under something drawn on top of it (arms over the top, top over the skirt)."""
+    res = js("""
+        const d = await import('./js/dancer.js');
+        const r = m.config.SEQUINS.radius;
+        const out = [];
+        for (const [id, pts] of Object.entries(d.SEQUIN_POINTS)) {
+            for (const p of pts) {
+                for (const o of d.SEQUIN_OCCLUDERS[id]) {
+                    const gap = o.kind === 'line'
+                        ? m.sequins.polylineDistance(p, o.points) - o.halfWidth - r
+                        : (m.sequins.insidePolygon(p, o.points) ? -1 : m.sequins.edgeDistance(p, o.points) - r);
+                    if (gap < 0) out.push([id, p.x, p.y, o.name, gap]);
+                }
+            }
+        }
+        return [out, Object.keys(d.SEQUIN_OCCLUDERS).sort(), Object.keys(d.SEQUIN_POINTS).sort()];
+    """)
+    covered, occ_ids, seq_ids = res
+    assert occ_ids == seq_ids, "every sequin outfit lists what covers it"
+    assert covered == [], covered[:5]
+
+
+def test_polyline_distance(js):
+    res = js("return [m.sequins.polylineDistance({x:5,y:3}, [{x:0,y:0},{x:10,y:0},{x:10,y:10}]),"
+             " m.sequins.polylineDistance({x:-4,y:0}, [{x:0,y:0},{x:10,y:0}])];")
+    assert res == [3, 4]

@@ -195,6 +195,8 @@ export const SEQUINS = Object.freeze({
   radius: 4,
   /** Sequins keep this distance (dancer units) from the clothing outline – edge sequins are hard to hit. */
   edgeMargin: 6.5,
+  /** Extra distance to shapes drawn on top (arms, top over skirt) – covers outline and wobble. */
+  coverGap: 1.5,
   /** Fingertip-sized touch radius (dancer units, ≈ 18 px on the iPad = ~36 px contact). Larger would flip the whole top. */
   touchRadius: 12,
   maxConcurrentFlips: 15,

@@ -7,7 +7,7 @@
 import { PALETTE as C, OUTFITS, SEQUINS } from './config.js';
 import { svg, svgRoot, inked } from './dom.js';
 import { sketchPath, sketchEllipse, sketchStar } from './sketch.js';
-import { layoutInPolygon } from './sequins.js';
+import { layoutInPolygon, quadraticPoints, isUncovered } from './sequins.js';
 import { sparkle } from './art.js';
 
 /** @typedef {{x: number, y: number}} Point */
@@ -18,9 +18,44 @@ export const SEQUIN_AREAS = Object.freeze({
   'pailletten-top': [{ x: 80, y: 104 }, { x: 120, y: 104 }, { x: 116, y: 160 }, { x: 84, y: 160 }],
 });
 
-/** Sequin positions per outfit, computed once. */
+/** Width of the dark limb outline stroke (arms and legs). */
+const LIMB_OUTLINE_WIDTH = 14;
+
+/** Arm curves (quadratic Bézier) in the normal pose – used for drawing and for the sequin cover check. */
+const ARMS = Object.freeze({
+  left: { from: { x: 82, y: 110 }, ctrl: { x: 62, y: 136 }, to: { x: 56, y: 168 } },
+  right: { from: { x: 118, y: 110 }, ctrl: { x: 138, y: 136 }, to: { x: 144, y: 168 } },
+});
+
+/** Outline of the top (default shirt); it is drawn over the skirt. */
+const TOP_OUTLINE = Object.freeze([{ x: 80, y: 104 }, { x: 120, y: 104 }, { x: 116, y: 162 }, { x: 84, y: 162 }]);
+
+/**
+ * SVG path of an arm curve.
+ * @param {{from: Point, ctrl: Point, to: Point}} a Arm curve.
+ * @returns {string}
+ */
+const armPath = (a) => `M${a.from.x} ${a.from.y} Q${a.ctrl.x} ${a.ctrl.y} ${a.to.x} ${a.to.y}`;
+
+/**
+ * Arm as a covering shape (centre line + half the outline width).
+ * @param {string} name Name for messages.
+ * @param {{from: Point, ctrl: Point, to: Point}} a Arm curve.
+ * @returns {import('./sequins.js').Occluder}
+ */
+const armOccluder = (name, a) => ({ kind: 'line', name, points: quadraticPoints(a.from, a.ctrl, a.to), halfWidth: LIMB_OUTLINE_WIDTH / 2 });
+
+/** Shapes drawn on top of each sequin area: sequins must not hide underneath them. */
+export const SEQUIN_OCCLUDERS = Object.freeze({
+  'pailletten-top': [armOccluder('arm-l', ARMS.left), armOccluder('arm-r', ARMS.right)],
+  'pailletten-rock': [{ kind: 'area', name: 'oberteil', points: [...TOP_OUTLINE] },
+    armOccluder('arm-l', ARMS.left), armOccluder('arm-r', ARMS.right)],
+});
+
+/** Sequin positions per outfit, computed once: inside the area, away from its edge, not covered. */
 export const SEQUIN_POINTS = Object.freeze(Object.fromEntries(
-  Object.entries(SEQUIN_AREAS).map(([id, poly]) => [id, layoutInPolygon(poly, SEQUINS.spacing, SEQUINS.edgeMargin)]),
+  Object.entries(SEQUIN_AREAS).map(([id, poly]) => [id, layoutInPolygon(poly, SEQUINS.spacing, SEQUINS.edgeMargin)
+    .filter((p) => isUncovered(p, SEQUINS.radius, SEQUIN_OCCLUDERS[id], SEQUINS.coverGap))]),
 ));
 
 /**
@@ -31,7 +66,7 @@ export const SEQUIN_POINTS = Object.freeze(Object.fromEntries(
  */
 function limb(d, color = C.haut) {
   return [
-    svg('path', { d, fill: 'none', stroke: C.tinte, 'stroke-width': 14, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+    svg('path', { d, fill: 'none', stroke: C.tinte, 'stroke-width': LIMB_OUTLINE_WIDTH, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
     svg('path', { d, fill: 'none', stroke: color, 'stroke-width': 9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
   ];
 }
@@ -112,7 +147,7 @@ function zigzag(x0, x1, top, bottom, teeth) {
 
 /** Default clothes when a slot is empty. */
 const DEFAULT_ART = {
-  oberteil: () => [inked(sketchPath([{ x: 80, y: 104 }, { x: 120, y: 104 }, { x: 116, y: 162 }, { x: 84, y: 162 }],
+  oberteil: () => [inked(sketchPath([...TOP_OUTLINE],
     { seed: 80, wobble: 0.6 }), C.salbei)],
   rock: () => [inked(sketchPath([{ x: 84, y: 158 }, { x: 116, y: 158 }, { x: 128, y: 196 }, { x: 72, y: 196 }],
     { seed: 81, wobble: 0.6 }), C.salbei)],
@@ -169,10 +204,10 @@ function handBrush() {
  */
 export function drawDancer({ wearing, sequinStates = {}, brushing = false, cls = '' }) {
   const legs = svg('g', { class: 'legs' }, [...limb('M90 196 L86 300'), ...limb('M110 196 L114 300')]);
-  const armL = svg('g', { class: 'arm arm-l' }, limb('M82 110 Q62 136 56 168'));
+  const armL = svg('g', { class: 'arm arm-l' }, limb(armPath(ARMS.left)));
   const armR = svg('g', { class: 'arm arm-r' }, brushing
     ? [...limb('M118 110 Q150 130 140 112'), handBrush()]
-    : limb('M118 110 Q138 136 144 168'));
+    : limb(armPath(ARMS.right)));
   const body = svg('g', { class: 'body' }, [
     legs,
     slotLayer('schuhe', wearing, sequinStates),
