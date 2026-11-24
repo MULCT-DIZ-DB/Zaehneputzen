@@ -37,3 +37,4 @@ A push to `main` is the whole release: the app updates about 1–11 minutes late
 | 404 on the live URL | No successful run yet, or the URL is missing `/Zaehneputzen/` at the end. |
 | iPad still shows the old version | Wait 10 minutes, then close and reopen the app while online. |
 | App doesn't work offline | A new file is missing from `PRECACHE` in `app/sw.js`. |
+| Run fails at "deploy-pages" with `No artifacts named "github-pages" were found` | The action versions in `.github/workflows/pages.yml` no longer fit together. Update `checkout`, `configure-pages`, `upload-pages-artifact` and `deploy-pages` to their latest major versions (see each action's Releases page on GitHub), then push. A single failure saying "Please re-run the deployment at a later time" can also be a GitHub outage: re-run once first. |
