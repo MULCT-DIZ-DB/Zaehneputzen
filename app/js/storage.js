@@ -5,7 +5,7 @@
  * @module storage
  */
 import {
-  STORAGE_KEY, SCHEMA_VERSION, DEFAULT_SETTINGS, TIMER, ZONE_ORDERS, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
+  STORAGE_KEY, SCHEMA_VERSION, MAX_NAME_LENGTH, DEFAULT_SETTINGS, TIMER, ZONE_ORDERS, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
 } from './config.js';
 
 /**
@@ -180,7 +180,7 @@ export function validateState(raw) {
   }
   return {
     schema: SCHEMA_VERSION,
-    name: typeof r.name === 'string' ? r.name.slice(0, 30) : '',
+    name: typeof r.name === 'string' ? r.name.slice(0, MAX_NAME_LENGTH) : '',
     sessions: Number.isInteger(r.sessions) && Number(r.sessions) >= 0 ? Number(r.sessions) : 0,
     stickers: cleanIds(r.stickers, STICKERS),
     outfits,

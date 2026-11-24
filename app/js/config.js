@@ -8,6 +8,7 @@
 export const APP_NAME = 'Zahnputz-Tanz';
 export const STORAGE_KEY = 'zahnputz-tanz';
 export const SCHEMA_VERSION = 1;
+export const MAX_NAME_LENGTH = 30;
 
 /** Brushing timer settings (seconds). */
 export const TIMER = Object.freeze({
@@ -19,8 +20,8 @@ export const TIMER = Object.freeze({
   fastTotalSec: 20,
   countdownSec: 3,
   fastCountdownSec: 1,
-  /** How often the progress ring is redrawn (ms) – saves work on the iPad 5. */
-  ringRedrawMs: 66,
+  /** Update interval of the brushing view (ms); visuals are CSS animations, so 10 Hz is enough. */
+  tickMs: 100,
   /** How long the "Wechseln!" hint stays visible (ms). */
   switchHintMs: 2500,
 });
@@ -69,6 +70,8 @@ export const PALETTE = Object.freeze({
   weiss: '#FFFDF8',
   haut: '#F3CFB3',
   haar: '#8A5A44',
+  mund: '#9C6461',
+  zunge: '#D98F8B',
 });
 
 /** Colours used for stickers (two per shape). */
@@ -161,6 +164,7 @@ export const MUSIC = Object.freeze({
     [71, 2], [74, 2], [72, 4],
   ],
   chimeNotes: [84, 88, 91],
+  countdownNotes: [79, 72, 76],
   fanfareNotes: [72, 76, 79, 84, 88],
 });
 
@@ -191,6 +195,7 @@ export const TEXT = Object.freeze({
   dressUp: 'Anziehen',
   pause: 'Pause',
   resume: 'Weiter putzen',
+  stop: 'Aufhören',
   paused: 'Pause – tippe zum Weitermachen',
   switchTo: 'Wechseln! Jetzt',
   brushNow: 'Drück jetzt den Knopf an deiner Zahnbürste!',
