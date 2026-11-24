@@ -33,6 +33,27 @@ export function sketchRect(x, y, w, h, seed) {
   ], { seed, wobble: 0.8 });
 }
 
+/** Tooth size in mouth units. */
+const TOOTH_W = 31;
+const TOOTH_H = 42;
+
+/**
+ * Top-left corner of a tooth (8 per row, following the curve of the mouth).
+ * @param {number} i Tooth index in its row (0–7).
+ * @param {boolean} upper Upper row?
+ * @returns {{x: number, y: number}}
+ */
+function toothCorner(i, upper) {
+  const curve = (i - 3.5) ** 2 * 2.2;
+  return { x: 64 + i * 34.5, y: upper ? 50 + curve : 208 - curve };
+}
+
+/** Centres of all 16 teeth (upper row left→right, then lower row) – used by the Zuckerjagd game. */
+export const TOOTH_CENTERS = Object.freeze([true, false].flatMap((upper) => Array.from({ length: 8 }, (_, i) => {
+  const c = toothCorner(i, upper);
+  return { x: c.x + TOOTH_W / 2, y: c.y + TOOTH_H / 2 };
+})));
+
 /**
  * One row of teeth (8 teeth) split into two zones.
  * @param {boolean} upper Upper row?
@@ -41,10 +62,8 @@ export function sketchRect(x, y, w, h, seed) {
 function teethRow(upper) {
   const groups = [svg('g'), svg('g')];
   for (let i = 0; i < 8; i += 1) {
-    const curve = (i - 3.5) ** 2 * 2.2;
-    const x = 64 + i * 34.5;
-    const y = upper ? 50 + curve : 208 - curve;
-    const tooth = inked(sketchRect(x, y, 31, 42, 100 + i + (upper ? 0 : 20)), C.weiss, { class: 'ink tooth' });
+    const { x, y } = toothCorner(i, upper);
+    const tooth = inked(sketchRect(x, y, TOOTH_W, TOOTH_H, 100 + i + (upper ? 0 : 20)), C.weiss, { class: 'ink tooth' });
     groups[i < 4 ? 0 : 1].append(tooth);
   }
   return groups;
@@ -165,6 +184,41 @@ export function drawConfetti(count) {
   });
 }
 
+/**
+ * Small stick-figure dancer for the pose pictograms (head, body, arms, legs).
+ * @param {string} arms Path data of both arms.
+ * @param {string} legs Path data of both legs.
+ * @param {number} [dy] Vertical shift (e.g. a jump).
+ * @returns {SVGElement[]}
+ */
+function poseFigure(arms, legs, dy = 0) {
+  return [svg('g', { transform: `translate(0 ${dy})` }, [
+    inked(sketchEllipse(24, 10, 5.5, 5.5, 32), C.haut, { 'stroke-width': 2 }),
+    svg('path', { d: `M24 16 L24 31 ${arms} ${legs}`, class: 'ink-line', fill: 'none' }),
+  ])];
+}
+
+/**
+ * A cute sugar bug for „Zuckerjagd“ (centred at 0,0) with a larger invisible tap area.
+ * @param {number} r Body radius.
+ * @param {number} hitR Radius of the tap area.
+ * @returns {SVGElement}
+ */
+export function drawBug(r, hitR) {
+  const e = r * 0.32;
+  return svg('g', { class: 'bug-shape' }, [
+    svg('circle', { cx: 0, cy: 0, r: hitR, fill: C.weiss, opacity: 0.01 }),
+    svg('path', { d: `M${-e} ${-r * 0.7} Q${-r * 0.7} ${-r * 1.5} ${-r} ${-r * 1.35} M${e} ${-r * 0.7} Q${r * 0.7} ${-r * 1.5} ${r} ${-r * 1.35}`,
+      class: 'ink-line thin' }),
+    inked(sketchEllipse(0, 0, r, r * 0.9, 33, 0.8), C.zucker),
+    svg('circle', { cx: -r * 0.55, cy: r * 0.35, r: r * 0.16, fill: C.rosa }),
+    svg('circle', { cx: r * 0.55, cy: r * 0.35, r: r * 0.16, fill: C.rosa }),
+    svg('circle', { cx: -e, cy: -r * 0.15, r: r * 0.16, fill: C.tinte }),
+    svg('circle', { cx: e, cy: -r * 0.15, r: r * 0.16, fill: C.tinte }),
+    svg('path', { d: `M${-e} ${r * 0.3} Q0 ${r * 0.55} ${e} ${r * 0.3}`, class: 'ink-line thin' }),
+  ]);
+}
+
 /** Icon drawings (viewBox 0 0 48 48) as factories, used once to build the sprite. */
 const ICONS = {
   sonne: () => [inked(sketchEllipse(24, 24, 10, 10, 11), C.butter),
@@ -185,6 +239,22 @@ const ICONS = {
   pause: () => [inked(sketchRect(12, 8, 9, 32, 22), C.petrol), inked(sketchRect(27, 8, 9, 32, 23), C.petrol)],
   play: () => [inked('M14 8 L38 24 L14 40 Z', C.salbei)],
   kreuz: () => [svg('path', { d: 'M13 13 L35 35 M35 13 L13 35', fill: 'none', stroke: C.rot, 'stroke-width': 8, 'stroke-linecap': 'round' })],
+  spiele: () => [inked(sketchRect(4, 14, 40, 24, 27), C.lavendel), svg('path', { d: 'M12 26 L20 26 M16 22 L16 30', class: 'ink-line' }),
+    inked(sketchEllipse(31, 24, 3, 3, 28), C.rosa, { 'stroke-width': 2 }), inked(sketchEllipse(36, 29, 3, 3, 29), C.butter, { 'stroke-width': 2 })],
+  klavier: () => [inked(sketchRect(4, 10, 40, 30, 30), C.weiss),
+    svg('path', { d: 'M14 10 L14 40 M24 10 L24 40 M34 10 L34 40', class: 'ink-line thin' }),
+    ...[11, 21, 31].map((x) => svg('rect', { x, y: 10, width: 6, height: 17, rx: 1.5, fill: C.tinte }))],
+  zucker: () => [inked(sketchEllipse(24, 28, 14, 12, 31), C.zucker),
+    svg('path', { d: 'M18 17 Q14 8 10 9 M30 17 Q34 8 38 9', class: 'ink-line thin' }),
+    svg('circle', { cx: 19, cy: 26, r: 2.5, fill: C.tinte }), svg('circle', { cx: 29, cy: 26, r: 2.5, fill: C.tinte }),
+    svg('path', { d: 'M19 33 Q24 36 29 33', class: 'ink-line thin' })],
+  'pose-arme': () => poseFigure('M24 18 L13 5 M24 18 L35 5', 'M24 31 L17 44 M24 31 L31 44'),
+  'pose-dreh': () => [...poseFigure('M24 18 L14 24 M24 18 L34 24', 'M24 31 L20 44 M24 31 L28 44'),
+    svg('path', { d: 'M7 30 Q4 14 18 6 M41 18 Q44 34 30 42', class: 'ink-line thin' }),
+    svg('path', { d: 'M15 3 L19 6 L15 10 M33 45 L29 42 L33 38', class: 'ink-line thin' })],
+  'pose-hupf': () => [...poseFigure('M24 18 L13 12 M24 18 L35 12', 'M24 29 L15 34 M24 29 L33 34', -4),
+    svg('path', { d: 'M12 42 L20 42 M28 42 L36 42 M18 46 L30 46', class: 'ink-line thin' })],
+  'pose-welle': () => poseFigure('M24 18 Q18 12 12 18 Q8 22 4 16 M24 18 Q30 24 36 18 Q40 14 44 20', 'M24 31 L18 44 M24 31 L30 44'),
   zurueck: () => [svg('path', { d: 'M30 10 L14 24 L30 38', class: 'ink-line', fill: 'none' })],
   note: () => [inked(sketchEllipse(16, 36, 8, 6, 24), C.petrol), svg('path', { d: 'M23 36 L23 8 L36 14', class: 'ink-line', fill: 'none' })],
 };

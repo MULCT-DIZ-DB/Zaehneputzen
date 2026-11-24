@@ -96,19 +96,19 @@ export class Music {
   }
 
   /**
-   * Plays one soft note (music-box or pad timbre).
+   * Plays one soft note (music-box, pad, bass, chime or piano timbre).
    * @param {number} midi MIDI note.
    * @param {number} when Start time (AudioContext seconds).
    * @param {number} dur Length in seconds.
-   * @param {'mel'|'pad'|'bass'|'chime'} kind Timbre.
+   * @param {'mel'|'pad'|'bass'|'chime'|'piano'} kind Timbre.
    * @returns {void}
    */
   note(midi, when, dur, kind) {
     if (!this.ctx || !this.filter) return;
-    const gains = { mel: MUSIC.melodyGain, pad: MUSIC.padGain, bass: MUSIC.bassGain, chime: MUSIC.chimeGain };
+    const gains = { mel: MUSIC.melodyGain, pad: MUSIC.padGain, bass: MUSIC.bassGain, chime: MUSIC.chimeGain, piano: MUSIC.pianoGain };
     const osc = this.ctx.createOscillator();
     const env = this.ctx.createGain();
-    osc.type = kind === 'pad' ? 'triangle' : 'sine';
+    osc.type = kind === 'pad' || kind === 'piano' ? 'triangle' : 'sine';
     osc.frequency.value = midiToHz(midi);
     const peak = gains[kind];
     const attack = kind === 'pad' ? 0.6 : 0.008;
@@ -185,6 +185,17 @@ export class Music {
     if (!this.ctx) return;
     const t = this.ctx.currentTime + 0.02;
     notes.forEach((n, i) => this.note(n, t + i * 0.14, 1.2, 'chime'));
+  }
+
+  /**
+   * Plays one piano tone right now (mini games). Works even when background music is off.
+   * @param {number} midi MIDI note.
+   * @param {number} durSec Length in seconds.
+   * @returns {void}
+   */
+  tone(midi, durSec) {
+    if (!this.ctx) return;
+    this.note(midi, this.ctx.currentTime + 0.01, durSec, 'piano');
   }
 
   /** Little fanfare at the end. @returns {void} */

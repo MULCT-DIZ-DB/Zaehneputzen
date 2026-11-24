@@ -207,6 +207,8 @@ export const PIANO = Object.freeze({
   twoStars: 0.5,
   threeStars: 0.85,
   toneSec: 1.2,
+  /** Notes keep falling this far past the hit line (share of the travel) before they disappear. */
+  overshoot: 1.25,
 });
 
 /** Mini game „Zuckerjagd“ (tap sugar bugs off the teeth). */
@@ -220,9 +222,11 @@ export const SUGAR = Object.freeze({
   startSpawnMs: 1000,
   minSpawnMs: 550,
   /** Bug radius in mouth drawing units (≈ 70 px wide on the iPad). */
-  bugRadius: 16,
-  hitRadius: 24,
+  bugRadius: 18,
+  hitRadius: 26,
   puffMs: 400,
+  /** Tones for a caught bug (cycled). */
+  hitNotes: [84, 88, 91],
 });
 
 /** Calm instrumental music (Web Audio). */
@@ -236,6 +240,7 @@ export const MUSIC = Object.freeze({
   padGain: 0.05,
   bassGain: 0.09,
   chimeGain: 0.25,
+  pianoGain: 0.32,
   lowpassHz: 2400,
   /** Chord roots (MIDI) for a 4-bar loop: C – Am – F – G. */
   chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],

@@ -320,3 +320,81 @@ h1, h2, p { margin: 0; font-weight: normal; }
 @keyframes bounce { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.18) rotate(-4deg); } 60% { transform: scale(0.95) rotate(3deg); } }
 @keyframes fall { 0% { transform: translate(0, 0) rotate(0); } 100% { transform: translate(var(--drift), calc(100vh + 120px)) rotate(320deg); } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* ---------- Mini games ---------- */
+.reward-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.btn-games { background: var(--lavendel); }
+.timeup-box { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 28px; padding: 24px; text-align: center; font-size: 40px; background: rgba(247, 241, 227, 0.95); }
+.games-time { font-size: 30px; text-align: center; }
+.game-cards { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-content: center; }
+.game-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 260px; padding: 20px; }
+.game-card .game-icon { width: 110px; height: 110px; }
+.game-title { font-size: 32px; text-align: center; }
+.game-best { font-size: 22px; min-height: 26px; }
+.game-status { font-size: 34px; text-align: center; min-height: 42px; }
+.game-level { font-size: 26px; text-align: center; }
+
+.dance-game-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.25fr; gap: 20px; align-items: center; }
+.dance-game-stage { height: 100%; min-height: 0; display: flex; justify-content: center; }
+.dance-game-stage .dancer { height: 100%; }
+.dance-game-panel { display: flex; flex-direction: column; gap: 14px; }
+.pose-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pose-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 140px; font-size: 26px; transition: transform 0.15s, opacity 0.2s; }
+.pose-btn .pose-icon { width: 80px; height: 80px; }
+.pose-btn.waiting { opacity: 0.55; }
+.pose-btn.lit { background: var(--butter); transform: scale(1.06); opacity: 1; }
+
+.piano-menu { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+.song-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: min(820px, 100%); }
+.song-btn { min-height: 84px; font-size: 28px; }
+.btn-free { background: var(--salbei); }
+.piano-play { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.piano-lanes { position: relative; flex: 1; min-height: 0; display: flex; overflow: hidden; border-bottom: 6px solid var(--tinte); }
+.piano-lane { position: relative; flex: 1; border-left: 2px dashed rgba(74, 63, 58, 0.15); }
+.piano-lane:first-child { border-left: 0; }
+.piano-lane::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: 0; height: 40px; border-radius: 50% 50% 0 0;
+  background: var(--butter); opacity: 0; }
+.piano-lane.sparkle-lane::after { animation: lane-flash 0.45s ease-out; }
+.piano-note { position: absolute; left: 50%; top: -28px; width: 56px; height: 56px; margin-left: -28px; border-radius: 50%;
+  background: var(--key-color); border: 3px solid var(--tinte); animation-name: note-fall; animation-timing-function: linear;
+  animation-fill-mode: forwards; transition: opacity 0.25s; }
+.piano-note.hit { opacity: 0; }
+.piano-keys { display: flex; gap: 6px; height: 150px; }
+.piano-key { flex: 1; min-width: 0; padding: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px;
+  font-size: 30px; background: var(--papier); border-radius: 0 0 18px 18px; border-bottom: 14px solid var(--key-color); }
+.piano-key.pressed { animation: key-press 0.25s ease-out; }
+.piano-result { position: absolute; inset: 10% 8% auto; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 18px;
+  padding: 28px; background: var(--papier); border: 3px solid var(--tinte); border-radius: var(--wobble); box-shadow: var(--shadow); }
+.piano-stars { font-size: 40px; text-align: center; }
+.piano-result-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+.sugar-top { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+.sugar-score { font-size: 48px; min-width: 70px; text-align: center; }
+.sugar-count { display: inline-block; }
+.sugar-count.pop { animation: pop 0.4s ease-out; }
+.sugar-bar { width: 240px; height: 18px; border: 3px solid var(--tinte); border-radius: 12px; overflow: hidden; background: var(--papier); }
+.sugar-bar-fill { width: 100%; height: 100%; background: var(--salbei); transform-origin: left center; }
+.sugar-bar.running .sugar-bar-fill { animation: bar-shrink var(--round) linear forwards; }
+.sugar-mouth { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.btn-sugar-start { position: absolute; z-index: 2; }
+.sugar-result { position: absolute; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 640px;
+  padding: 28px; text-align: center; font-size: 34px; background: var(--papier); border: 3px solid var(--tinte);
+  border-radius: var(--wobble); box-shadow: var(--shadow); }
+.sugar-mouth .spots, .sugar-mouth .zone-clean { display: none; }
+.bug { cursor: pointer; }
+.bug-pop { transform-box: fill-box; transform-origin: center; animation: pop-in 0.25s ease-out; transition: transform 0.4s, opacity 0.4s; }
+.bug.puff .bug-pop { transform: scale(1.7); opacity: 0; }
+
+@media (orientation: portrait) {
+  .dance-game-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .game-card { min-height: 220px; }
+  .game-title { font-size: 26px; }
+  .song-list { grid-template-columns: 1fr; }
+  .piano-key { font-size: 24px; }
+}
+
+@keyframes note-fall { from { transform: translateY(0); } to { transform: translateY(var(--fall)); } }
+@keyframes key-press { 0% { transform: translateY(0); } 40% { transform: translateY(5px); } 100% { transform: translateY(0); } }
+@keyframes lane-flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+@keyframes bar-shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
