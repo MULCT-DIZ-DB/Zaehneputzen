@@ -432,3 +432,10 @@ h1, h2, p { margin: 0; font-weight: normal; }
   border: 3px solid var(--tinte); border-radius: 14px; background: var(--papier); color: var(--tinte); -webkit-user-select: text; user-select: text; }
 .gate-wrong { font-size: 24px; color: #9C6461; }
 .dev-panel .math-gate { align-items: flex-start; }
+/* Außenflächen: mouth closed (teeth together) so the outer surfaces are obvious. */
+.mouth .jaw, .mouth .mouth-inner, .mouth .tongue { transform-box: view-box; transition: transform 0.6s ease-in-out, opacity 0.4s; }
+.mouth .mouth-inner { transform-origin: 200px 150px; }
+.mouth[data-surface='aussen'] .jaw-oben { transform: translateY(44px); }
+.mouth[data-surface='aussen'] .jaw-unten { transform: translateY(-52px); }
+.mouth[data-surface='aussen'] .mouth-inner { transform: scaleY(0.55); }
+.mouth[data-surface='aussen'] .tongue { opacity: 0; }

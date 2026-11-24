@@ -99,6 +99,7 @@ export function createBrushScreen(ctx) {
     tooth.dataset.face = step.surface;
     tooth.dataset.jaw = jaw;
     JAW_IDS.forEach((j) => mouth.jaws[j].classList.toggle('active', j === jaw));
+    mouth.root.insertBefore(mouth.jaws[jaw], mouth.brush); // active jaw in front (matters when the mouth is closed)
     const pose = BRUSH_POSES[step.surface][jaw];
     mouth.brush.style.transform = `translate(${pose.x}px, ${pose.y}px)`;
     mouth.brushFlip.style.transform = `scale(1, ${pose.up ? 1 : -1})`;

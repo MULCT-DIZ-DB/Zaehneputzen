@@ -101,3 +101,29 @@ def test_kai_logic(js):
     assert abs(lower_half - 1 / 6) < 1e-9 and upper_none == 0
     assert abs(lower_third - 1 / 3) < 1e-9 and upper_full == 1
     assert abs(three_lower - 1 / 3) < 1e-9 and three_upper == 0 and three_full == 1
+
+def mouth_shape(page):
+    """Transforms of the jaws, inner mouth and tongue opacity (closed mouth = jaws moved together)."""
+    return page.evaluate(f"""() => {{
+        const m = document.querySelector('{MOUTH}');
+        const t = sel => getComputedStyle(m.querySelector(sel)).transform;
+        return {{ upper: t('.jaw-oben'), lower: t('.jaw-unten'), inner: t('.mouth-inner'),
+                 tongue: getComputedStyle(m.querySelector('.tongue')).opacity }};
+    }}""")
+
+
+def test_mouth_closes_for_outer_surfaces(app_page):
+    page = app_page
+    start_brushing(page)
+    open_shape = mouth_shape(page)
+    assert open_shape["upper"] == "none" and open_shape["lower"] == "none", "open mouth for Kauflächen"
+    step = fast_total_ms(page) / 6
+    page.clock.run_for(int(step * 2) + 50)  # Außenflächen unten
+    assert state(page)["surface"] == "aussen"
+    page.wait_for_timeout(800)  # let the closing transition finish (real time)
+    closed = mouth_shape(page)
+    assert closed["upper"] != "none" and closed["lower"] != "none", "jaws moved together"
+    assert closed["inner"] != "none" and float(closed["tongue"]) < 0.05, "mouth closed, tongue hidden"
+    page.clock.run_for(int(step * 2))  # Innenflächen: open again
+    page.wait_for_timeout(800)
+    assert mouth_shape(page)["upper"] == "none"
