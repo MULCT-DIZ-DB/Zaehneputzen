@@ -2,16 +2,16 @@
 
 Eine ruhige, gezeichnete Zahnputz-App für Kinder – gedacht als flüssige Alternative zur Sonicare-for-Kids-App auf älteren iPads (getestet für iPad 5. Generation, iOS 16).
 
-- **2 Minuten, 4 Zonen à 30 s** (oben links → oben rechts → unten links → unten rechts) – passend zum 30-Sekunden-Signal der Zahnbürste. Beim „Los!“ gleichzeitig den Knopf an der Zahnbürste drücken.
-- **Animation**: gezeichneter Mund, die Zahnbürste putzt die aktive Zone, Zuckerpunkte verschwinden, die Tänzerin putzt mit. Beim Wechsel: Glockenton, Drehung, „Wechseln! Jetzt …“.
+- **Putzen nach KAI** (Kauflächen → Außenflächen → Innenflächen), 2 Minuten. Standard: **6 Schritte à 20 s** (jede Fläche erst unten, dann oben); alternativ **3 Schritte à 40 s** (unten und oben zusammen, die Bürste wechselt zur Hälfte nach oben). Einstellbar im Eltern-Menü. Hinweis: Die Sonicare summt weiterhin alle 30 s – die App signalisiert ihre Wechsel mit einem Glockenton. Beim „Los!“ gleichzeitig den Knopf an der Zahnbürste drücken.
+- **Animation**: gezeichneter Mund; die aktive Fläche leuchtet, die Bürste zeigt die Bewegung (Kauflächen: hin und her, Außenflächen: kleine Kreise, Innenflächen: von Rot nach Weiß). Ein Zahn-Querschnitt zeigt, welche Fläche dran ist. Zuckerpunkte verschwinden; beim Wechsel Glockenton und „Wechseln! Jetzt …“.
 - **Geschenke**: Sticker-Album (30 Sticker, jeder 4. glitzert), Kleider für die Tänzerin (alle 5 Putzrunden), Tanzschritte (3/7/14/21/30 Tage in Folge), Kalender mit Sonne (morgens) und Mond (abends). Höchstens 2 Geschenke pro Tag.
 - **Wende-Pailletten**: Pailletten-Rock und -Top lassen sich beim Anziehen mit dem Finger umstreichen (runter = andere Farbe, hoch = zurück).
 - **Musik**: ruhige, langsame Instrumentalmusik, live im Browser erzeugt (keine Audiodateien, keine Lizenzfragen). Abschaltbar.
 - **Mini-Spiele** (nur nach dem Zähneputzen, Standard 5 Minuten, im Eltern-Menü 0–15 Min. einstellbar, 0 = aus; keine Geschenke, nur ein Rekord):
   - **Tanzschritte merken** – die Tänzerin zeigt Posen vor, das Kind tippt sie nach (2 bis 8 Schritte, kein „Verloren“).
-  - **Klavier** – Töne gleiten auf 8 große Tasten (C–C); im richtigen Moment tippen. Lieder: Alle meine Entchen, Ode an die Freude, Morgen kommt der Weihnachtsmann, Hänschen klein, Wiegenlied (Brahms) – plus „Frei spielen“.
+  - **Klavier** – Töne gleiten auf 8 große Tasten (C–C); im richtigen Moment tippen oder über die Tasten streichen. Tempo: Langsam (Übungstempo, ca. 60–70 %), Mittel (85 % des Originaltempos), Normal (Originaltempo). Lieder: Alle meine Entchen, Ode an die Freude, Morgen kommt der Weihnachtsmann, Hänschen klein, Wiegenlied (Brahms) – plus „Frei spielen“.
   - **Zuckerjagd** – Zuckermonster auf den Zähnen wegtippen, 45 Sekunden pro Runde.
-- **Eltern-Menü**: Zahnrad oben rechts **3 Sekunden gedrückt halten** → Name, Putzzeit (60–150 s), Reihenfolge, Musik, Lautstärke, Spielzeit, Fortschritt löschen.
+- **Eltern-Menü**: Symbol oben rechts antippen und eine **Malaufgabe** (kleines Einmaleins) lösen → Name, Putzzeit (60–150 s), Putz-Reihenfolge (KAI 6 oder 3 Schritte), Musik, Lautstärke, Spielzeit, Fortschritt löschen.
 
 Alles bleibt auf dem Gerät (localStorage) – es werden keine Daten verschickt.
 

@@ -14,27 +14,33 @@ def cfg(js):
 
 def test_timer_values_are_positive_numbers(cfg):
     t = cfg["TIMER"]
-    for key in ("defaultTotalSec", "minTotalSec", "maxTotalSec", "stepSec", "zoneCount",
+    for key in ("defaultTotalSec", "minTotalSec", "maxTotalSec", "stepSec",
                 "fastTotalSec", "countdownSec", "fastCountdownSec"):
         assert isinstance(t[key], (int, float)) and t[key] > 0, key
     assert t["minTotalSec"] <= t["defaultTotalSec"] <= t["maxTotalSec"]
-    assert t["defaultTotalSec"] == 120 and t["zoneCount"] == 4
+    assert t["defaultTotalSec"] == 120
     assert (t["maxTotalSec"] - t["minTotalSec"]) % t["stepSec"] == 0
 
 
-def test_four_zones_with_german_labels(cfg):
-    zones = cfg["ZONES"]
-    assert len(zones) == cfg["TIMER"]["zoneCount"]
-    assert [z["label"] for z in zones] == ["oben links", "oben rechts", "unten links", "unten rechts"]
-    assert len({z["id"] for z in zones}) == 4
+def test_kai_brush_plans(cfg):
+    plans = {p["id"]: p for p in cfg["BRUSH_PLANS"]}
+    assert set(plans) == {"kai6", "kai3"}
+    assert cfg["DEFAULT_SETTINGS"]["brushPlan"] == "kai6"
+    six = [(s["surface"], s["jaw"]) for s in plans["kai6"]["steps"]]
+    assert six == [("kau", "unten"), ("kau", "oben"), ("aussen", "unten"), ("aussen", "oben"),
+                   ("innen", "unten"), ("innen", "oben")]
+    three = [(s["surface"], s["jaw"]) for s in plans["kai3"]["steps"]]
+    assert three == [("kau", "beide"), ("aussen", "beide"), ("innen", "beide")]
+    for plan in plans.values():
+        assert plan["label"].startswith("KAI")
 
 
-def test_zone_orders_are_permutations(cfg):
-    assert cfg["ZONE_ORDERS"], "at least one order"
-    for order in cfg["ZONE_ORDERS"]:
-        assert sorted(order["order"]) == [0, 1, 2, 3], order["id"]
-        assert isinstance(order["label"], str) and order["label"]
-    assert cfg["DEFAULT_SETTINGS"]["zoneOrder"] in {o["id"] for o in cfg["ZONE_ORDERS"]}
+def test_surfaces_and_jaws_german(cfg):
+    names = [cfg["SURFACES"][k]["name"] for k in ("kau", "aussen", "innen")]
+    assert names == ["Kauflächen", "Außenflächen", "Innenflächen"]
+    for s in cfg["SURFACES"].values():
+        assert s["how"] and s["motion"].startswith("motion-")
+    assert cfg["JAWS"] == {"unten": "unten", "oben": "oben", "beide": "unten und oben"}
 
 
 @pytest.mark.parametrize("catalog", ["STICKERS", "OUTFITS", "MOVES"])

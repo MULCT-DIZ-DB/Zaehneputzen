@@ -3,7 +3,7 @@
  * Hidden parent menu: name, brushing time, zone order, music, reset.
  * @module screens/parents
  */
-import { TEXT, TIMER, ZONE_ORDERS, MAX_NAME_LENGTH, GAMES } from '../config.js';
+import { TEXT, TIMER, BRUSH_PLANS, MAX_NAME_LENGTH, GAMES } from '../config.js';
 import { el } from '../dom.js';
 import { defaultState } from '../storage.js';
 import { makeScreen, textButton } from './base.js';
@@ -34,7 +34,7 @@ export function createParentsScreen(ctx) {
     type: 'range', min: TIMER.minTotalSec, max: TIMER.maxTotalSec, step: TIMER.stepSec } }));
   const totalValue = el('span', { cls: 'form-value' });
   const order = /** @type {HTMLSelectElement} */ (el('select', { id: 'select-order' },
-    ZONE_ORDERS.map((o) => el('option', { text: o.label, attrs: { value: o.id } }))));
+    BRUSH_PLANS.map((p) => el('option', { text: p.label, attrs: { value: p.id } }))));
   const music = /** @type {HTMLInputElement} */ (el('input', { id: 'input-music', attrs: { type: 'checkbox' } }));
   const volume = /** @type {HTMLInputElement} */ (el('input', { id: 'input-volume', attrs: { type: 'range', min: 0, max: 1, step: 0.05 } }));
   const play = /** @type {HTMLInputElement} */ (el('input', { id: 'input-play', attrs: {
@@ -45,7 +45,7 @@ export function createParentsScreen(ctx) {
   /** Reads the form into the state. @returns {void} */
   function save() {
     const state = ctx.getState();
-    const settings = { ...state.settings, totalSec: Number(total.value), zoneOrder: order.value,
+    const settings = { ...state.settings, totalSec: Number(total.value), brushPlan: order.value,
       music: music.checked, volume: Number(volume.value), playMinutes: Number(play.value) };
     totalValue.textContent = `${settings.totalSec} ${TEXT.seconds}`;
     playValue.textContent = playText(settings.playMinutes);
@@ -85,7 +85,7 @@ export function createParentsScreen(ctx) {
     name.value = n;
     total.value = String(s.totalSec);
     totalValue.textContent = `${s.totalSec} ${TEXT.seconds}`;
-    order.value = s.zoneOrder;
+    order.value = s.brushPlan;
     music.checked = s.music;
     volume.value = String(s.volume);
     play.value = String(s.playMinutes);

@@ -1,20 +1,25 @@
 // @ts-check
 /**
- * Hand-drawn SVG artwork: mouth with zones, toothbrush, gift box, confetti, icon sprite.
+ * Hand-drawn SVG artwork: mouth with KAI surfaces, tooth cross-section, toothbrush, gift box, confetti, icon sprite.
  * Everything is built once; animations only touch transform/opacity via CSS classes.
  * @module art
  */
-import { PALETTE as C, ZONES, UI } from './config.js';
+import { PALETTE as C, UI } from './config.js';
 import { svg, svgRoot, inked } from './dom.js';
 import { sketchPath, sketchEllipse, sketchStar, seeded } from './sketch.js';
 
-/** Zone centres in the mouth drawing (viewBox 0 0 400 300), same order as ZONES. */
-export const ZONE_CENTERS = Object.freeze([
-  { x: 125, y: 92 }, { x: 275, y: 92 }, { x: 125, y: 208 }, { x: 275, y: 208 },
-]);
+/** Number of "sugar spots" per jaw that disappear while brushing. */
+export const SPOTS_PER_JAW = 6;
 
-/** Number of "sugar spots" per zone that disappear while brushing. */
-export const SPOTS_PER_ZONE = 4;
+/**
+ * Brush position in the mouth drawing (viewBox 0 0 400 300) per KAI surface and jaw.
+ * `up`: bristles point up (else down, towards the teeth).
+ */
+export const BRUSH_POSES = Object.freeze({
+  kau: { unten: { x: 200, y: 190, up: false }, oben: { x: 200, y: 110, up: true } },
+  aussen: { unten: { x: 200, y: 230, up: true }, oben: { x: 200, y: 72, up: false } },
+  innen: { unten: { x: 200, y: 176, up: false }, oben: { x: 200, y: 124, up: true } },
+});
 
 /**
  * Rounded, wobbly rectangle path.
@@ -55,37 +60,63 @@ export const TOOTH_CENTERS = Object.freeze([true, false].flatMap((upper) => Arra
 })));
 
 /**
- * One row of teeth (8 teeth) split into two zones.
+ * One row of 8 teeth.
  * @param {boolean} upper Upper row?
- * @returns {SVGElement[]} One group per zone (left, right).
+ * @returns {SVGElement}
  */
 function teethRow(upper) {
-  const groups = [svg('g'), svg('g')];
-  for (let i = 0; i < 8; i += 1) {
+  return svg('g', { class: 'teeth' }, Array.from({ length: 8 }, (_, i) => {
     const { x, y } = toothCorner(i, upper);
-    const tooth = inked(sketchRect(x, y, TOOTH_W, TOOTH_H, 100 + i + (upper ? 0 : 20)), C.weiss, { class: 'ink tooth' });
-    groups[i < 4 ? 0 : 1].append(tooth);
-  }
-  return groups;
+    return inked(sketchRect(x, y, TOOTH_W, TOOTH_H, 100 + i + (upper ? 0 : 20)), C.weiss, { class: 'ink tooth' });
+  }));
 }
 
 /**
- * Sugar spots for one zone (fade out with brushing progress).
- * @param {number} zone Zone index.
+ * Points along a tooth row at a given height inside the teeth (0 = edge towards the gum, 1 = biting edge).
+ * @param {boolean} upper Upper row?
+ * @param {number} share Position between gum side (0) and biting edge (1).
+ * @param {number} [offset] Extra distance beyond that (towards the inside of the mouth).
+ * @returns {{x: number, y: number}[]}
+ */
+function rowLine(upper, share, offset = 0) {
+  return Array.from({ length: 8 }, (_, i) => {
+    const c = toothCorner(i, upper);
+    const y = upper ? c.y + TOOTH_H * share + offset : c.y + TOOTH_H * (1 - share) - offset;
+    return { x: c.x + TOOTH_W / 2, y };
+  });
+}
+
+/**
+ * Highlight band along a tooth row for one KAI surface.
+ * @param {boolean} upper Upper row?
+ * @param {'kau'|'aussen'|'innen'} surface Surface.
  * @returns {SVGElement}
  */
-function zoneSpots(zone) {
-  const rnd = seeded(500 + zone);
-  const c = ZONE_CENTERS[zone];
-  const g = svg('g', { class: 'spots' });
-  for (let k = 0; k < SPOTS_PER_ZONE; k += 1) {
-    const color = k % 2 ? C.butter : C.salbei;
-    g.append(svg('circle', {
-      cx: Math.round(c.x - 50 + k * 30 + rnd() * 10), cy: Math.round(c.y - 8 + rnd() * 16),
-      r: 4 + Math.round(rnd() * 3), fill: color, class: 'spot', 'data-k': k,
-    }));
-  }
-  return g;
+function surfaceHighlight(upper, surface) {
+  const shapes = { kau: [1, 0, 16], aussen: [0.5, 0, 40], innen: [1, 14, 18] };
+  const [share, offset, width] = shapes[surface];
+  return svg('path', {
+    d: sketchPath(rowLine(upper, share, offset), { closed: false, wobble: 0.6, seed: upper ? 41 : 42 }),
+    fill: 'none', stroke: C.butter, 'stroke-width': width, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    class: `hl hl-${surface}`,
+  });
+}
+
+/**
+ * Sugar spots on the tooth faces of one jaw (fade out with brushing progress).
+ * @param {boolean} upper Upper row?
+ * @returns {SVGElement}
+ */
+function jawSpots(upper) {
+  const rnd = seeded(upper ? 500 : 501);
+  const teeth = [0, 2, 3, 4, 5, 7];
+  return svg('g', { class: 'spots' }, teeth.slice(0, SPOTS_PER_JAW).map((i, k) => {
+    const c = toothCorner(i, upper);
+    return svg('circle', {
+      cx: Math.round(c.x + 8 + rnd() * 15), cy: Math.round(c.y + 12 + rnd() * 18),
+      r: 4 + Math.round(rnd() * 3), fill: k % 2 ? C.butter : C.salbei, class: 'spot', 'data-k': k,
+    });
+  }));
 }
 
 /**
@@ -120,29 +151,62 @@ function toothbrush() {
 }
 
 /**
- * Builds the mouth with highlight, spots and sparkles per zone plus the moving brush.
- * @returns {{root: SVGElement, zones: SVGElement[], brush: SVGElement, brushFlip: SVGElement}}
+ * One jaw: inner-side highlight (behind the teeth), teeth, sugar spots, chewing-edge and
+ * outer-face highlights, and sparkles shown when the jaw is clean.
+ * @param {boolean} upper Upper jaw?
+ * @returns {SVGElement}
+ */
+function jaw(upper) {
+  const mid = toothCorner(3, upper);
+  const y = mid.y + TOOTH_H / 2;
+  return svg('g', { class: `jaw jaw-${upper ? 'oben' : 'unten'}` }, [
+    surfaceHighlight(upper, 'innen'),
+    teethRow(upper),
+    jawSpots(upper),
+    surfaceHighlight(upper, 'aussen'),
+    surfaceHighlight(upper, 'kau'),
+    svg('g', { class: 'jaw-clean' }, [sparkle(110, y - 10, 10), sparkle(290, y + 6, 8), sparkle(200, y + (upper ? -16 : 16), 7)]),
+  ]);
+}
+
+/**
+ * Builds the mouth for KAI brushing: two jaws with surface highlights and the moving brush.
+ * State is set from outside via `data-surface` / `data-jaw` on the root and classes on the jaws.
+ * @returns {{root: SVGElement, jaws: {oben: SVGElement, unten: SVGElement}, brush: SVGElement,
+ *   brushFlip: SVGElement, brushMotion: SVGElement}}
  */
 export function drawMouth() {
   const lips = inked(sketchEllipse(200, 150, 188, 132, 1, 2), C.rosa, { 'stroke-width': 4 });
   const inner = inked(sketchEllipse(200, 150, 160, 106, 2, 2), C.mund);
   const tongue = svg('path', { d: sketchEllipse(200, 198, 92, 36, 3, 2), fill: C.zunge });
-  const [ul, ur] = teethRow(false);
-  const [ol, or] = teethRow(true);
-  const teeth = [ol, or, ul, ur];
-  const zones = ZONES.map((z, i) => {
-    const c = ZONE_CENTERS[i];
-    return svg('g', { class: 'zone', 'data-zone': z.id }, [
-      svg('path', { d: sketchEllipse(c.x, c.y + (i < 2 ? -6 : 6), 82, 40, 40 + i, 3), fill: C.butter, class: 'zone-hl' }),
-      teeth[i],
-      zoneSpots(i),
-      svg('g', { class: 'zone-clean' }, [sparkle(c.x - 30, c.y - 14, 10), sparkle(c.x + 34, c.y + 8, 7)]),
-    ]);
-  });
-  const brushFlip = svg('g', { class: 'brush-flip' }, [svg('g', { class: 'brush-scrub' }, [toothbrush()])]);
+  const jaws = { unten: jaw(false), oben: jaw(true) };
+  const brushMotion = svg('g', { class: 'brush-motion' }, [toothbrush()]);
+  const brushFlip = svg('g', { class: 'brush-flip' }, [brushMotion]);
   const brush = svg('g', { class: 'brush-pos' }, [brushFlip]);
-  const root = svgRoot('0 0 400 300', 'mouth', [lips, inner, tongue, ...zones, brush]);
-  return { root, zones, brush, brushFlip };
+  const root = svgRoot('0 0 400 300', 'mouth', [lips, inner, tongue, jaws.unten, jaws.oben, brush]);
+  return { root, jaws, brush, brushFlip, brushMotion };
+}
+
+/**
+ * Cross-section of a molar showing the three KAI surfaces (for the brushing screen).
+ * Set `data-face` (kau/aussen/innen) and `data-jaw` (unten/oben flips it) on the root.
+ * @param {{outer: string, inner: string}} labels Side labels.
+ * @returns {SVGElement}
+ */
+export function drawToothSection(labels) {
+  const crown = 'M42 108 L42 58 Q42 34 56 36 Q63 24 70 34 Q77 24 84 36 Q98 34 98 58 L98 108 Z';
+  const flip = svg('g', { class: 'ts-flip' }, [
+    inked(sketchEllipse(70, 112, 50, 16, 61, 1), C.rosa),
+    inked(crown, C.weiss),
+    svg('path', { d: 'M42 58 Q42 34 56 36 Q63 24 70 34 Q77 24 84 36 Q98 34 98 58', class: 'face face-kau' }),
+    svg('path', { d: 'M42 60 L42 104', class: 'face face-aussen' }),
+    svg('path', { d: 'M98 60 L98 104', class: 'face face-innen' }),
+  ]);
+  return svgRoot('0 0 140 130', 'tooth-section', [
+    flip,
+    svg('text', { x: 18, y: 72, class: 'ts-label', 'text-anchor': 'middle' }, [document.createTextNode(labels.outer)]),
+    svg('text', { x: 122, y: 72, class: 'ts-label', 'text-anchor': 'middle' }, [document.createTextNode(labels.inner)]),
+  ]);
 }
 
 /**

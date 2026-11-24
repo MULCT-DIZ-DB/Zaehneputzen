@@ -5,12 +5,12 @@
  * @module storage
  */
 import {
-  STORAGE_KEY, SCHEMA_VERSION, MAX_NAME_LENGTH, DEFAULT_SETTINGS, TIMER, ZONE_ORDERS, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
+  STORAGE_KEY, SCHEMA_VERSION, MAX_NAME_LENGTH, DEFAULT_SETTINGS, TIMER, BRUSH_PLANS, PIANO, STICKERS, OUTFITS, MOVES, OUTFIT_SLOTS,
   BACKGROUNDS, GAMES,
 } from './config.js';
 
 /**
- * @typedef {{totalSec: number, zoneOrder: string, music: boolean, volume: number}} Settings
+ * @typedef {{totalSec: number, brushPlan: string, music: boolean, volume: number, playMinutes: number, pianoTempo: string}} Settings
  * @typedef {{morgens: boolean, abends: boolean}} DayEntry
  * @typedef {Object} State
  * @property {number} schema
@@ -129,10 +129,12 @@ function isObject(v) {
  */
 function cleanSettings(raw) {
   const s = isObject(raw) ? raw : {};
-  const orders = ZONE_ORDERS.map((o) => o.id);
+  const plans = BRUSH_PLANS.map((p) => p.id);
+  const tempos = PIANO.tempos.map((p) => p.id);
   return {
     totalSec: clampNumber(s.totalSec, TIMER.minTotalSec, TIMER.maxTotalSec, DEFAULT_SETTINGS.totalSec),
-    zoneOrder: typeof s.zoneOrder === 'string' && orders.includes(s.zoneOrder) ? s.zoneOrder : DEFAULT_SETTINGS.zoneOrder,
+    brushPlan: typeof s.brushPlan === 'string' && plans.includes(s.brushPlan) ? s.brushPlan : DEFAULT_SETTINGS.brushPlan,
+    pianoTempo: typeof s.pianoTempo === 'string' && tempos.includes(s.pianoTempo) ? s.pianoTempo : DEFAULT_SETTINGS.pianoTempo,
     music: typeof s.music === 'boolean' ? s.music : DEFAULT_SETTINGS.music,
     volume: clampNumber(s.volume, 0, 1, DEFAULT_SETTINGS.volume),
     playMinutes: Math.round(clampNumber(s.playMinutes, GAMES.minMinutes, GAMES.maxMinutes, DEFAULT_SETTINGS.playMinutes)),

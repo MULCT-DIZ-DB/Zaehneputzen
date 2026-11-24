@@ -108,7 +108,7 @@ def js(harness) -> Callable[..., Any]:
     """
     loader = """async ([body, arg]) => {
         const names = ['config', 'timer', 'storage', 'rewards', 'sequins', 'sketch', 'devmode', 'backup', 'playtime',
-                       'songs', 'games/dancememory', 'games/piano', 'games/sugarhunt'];
+                       'songs', 'games/dancememory', 'games/piano', 'games/sugarhunt', 'kai'];
         const m = {};
         for (const n of names) { m[n.split('/').pop()] = await import(`./js/${n}.js`); }
         const fn = new Function('m', 'arg', `return (async () => { ${body} })();`);

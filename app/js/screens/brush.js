@@ -1,35 +1,44 @@
 // @ts-check
 /**
- * Brushing screen: mouth with active zone, moving brush, unlockable background,
- * progress ring, zone change hint and pause.
+ * Brushing screen after KAI: mouth with the active surface and jaw, brush with the matching
+ * motion (back and forth / small circles / red-to-white), tooth cross-section, unlockable
+ * background, progress ring, switch hint and pause.
  * @module screens/brush
  */
-import { TEXT, TIMER, ZONES, ZONE_ORDERS } from '../config.js';
+import { TEXT, TIMER, SURFACES } from '../config.js';
 import { el, svg, svgRoot, replayClass, clear } from '../dom.js';
-import { drawMouth, ZONE_CENTERS, SPOTS_PER_ZONE, icon } from '../art.js';
+import { drawMouth, drawToothSection, BRUSH_POSES, SPOTS_PER_JAW, icon } from '../art.js';
 import { drawBackground } from '../backgrounds.js';
 import { ZoneTimer, zoneWatcher } from '../timer.js';
 import { completeSession } from '../rewards.js';
 import { openPlayWindow } from '../playtime.js';
+import { planSteps, stepLabel, jawAt, jawProgress } from '../kai.js';
 import { makeScreen, iconButton } from './base.js';
 
 const RING_R = 44;
 const RING_LEN = 2 * Math.PI * RING_R;
+/** @type {('unten'|'oben')[]} */
+const JAW_IDS = ['unten', 'oben'];
 
 /**
- * Progress ring (one per zone) plus footprints for finished zones.
- * @returns {{root: HTMLElement, set: (zoneIndex: number, progress: number) => void}}
+ * Progress ring for the current step plus one star per step.
+ * @returns {{root: HTMLElement, setCount: (n: number) => void, set: (index: number, progress: number) => void}}
  */
 function progressRing() {
   const arc = svg('circle', { cx: 50, cy: 50, r: RING_R, class: 'ring-arc', 'stroke-dasharray': RING_LEN.toFixed(1) });
   const ring = svgRoot('0 0 100 100', 'ring', [svg('circle', { cx: 50, cy: 50, r: RING_R, class: 'ring-bg' }), arc]);
-  const steps = ZONES.map(() => el('span', { cls: 'step' }, [icon('stern')]));
-  const root = el('div', { cls: 'progress' }, [ring, el('div', { cls: 'steps' }, steps)]);
+  const starBox = el('div', { cls: 'steps' });
+  /** @type {HTMLElement[]} */ let stars = [];
   return {
-    root,
-    set(zoneIndex, progress) {
+    root: el('div', { cls: 'progress' }, [ring, starBox]),
+    setCount(n) {
+      clear(starBox);
+      stars = Array.from({ length: n }, () => el('span', { cls: 'step' }, [icon('stern')]));
+      starBox.append(...stars);
+    },
+    set(index, progress) {
       arc.setAttribute('stroke-dashoffset', (RING_LEN * (1 - progress)).toFixed(1));
-      steps.forEach((s, i) => s.classList.toggle('done', i < zoneIndex));
+      stars.forEach((s, i) => s.classList.toggle('done', i < index));
     },
   };
 }
@@ -42,7 +51,9 @@ function progressRing() {
 export function createBrushScreen(ctx) {
   const { section, body } = makeScreen('brush');
   const mouth = drawMouth();
+  const tooth = drawToothSection({ outer: TEXT.toothOuter, inner: TEXT.toothInner });
   const label = el('div', { cls: 'zone-label', id: 'zone-label' });
+  const how = el('div', { cls: 'zone-how', id: 'zone-how' });
   const hint = el('div', { cls: 'switch-hint', id: 'switch-hint' });
   const go = el('div', { cls: 'go-pop', text: TEXT.go });
   const ring = progressRing();
@@ -54,61 +65,71 @@ export function createBrushScreen(ctx) {
   const stopBtn = iconButton('kreuz', TEXT.stop, () => finish(false), 'btn-stop', { id: 'btn-stop' });
   const pausedBox = el('div', { cls: 'paused-box' }, [stopBtn, el('p', { cls: 'paused-title', text: TEXT.paused }), resumeBtn]);
   section.prepend(bgLayer);
-  body.append(el('div', { cls: 'brush-top' }, [label, ring.root]), el('div', { cls: 'mouth-wrap' }, [mouth.root]),
-    hint, go, pausedBox, pauseBtn);
+  body.append(
+    el('div', { cls: 'brush-top' }, [tooth, el('div', { cls: 'zone-text' }, [label, how]), ring.root]),
+    el('div', { cls: 'mouth-wrap' }, [mouth.root]),
+    hint, go, pausedBox, pauseBtn,
+  );
 
   /** @type {ZoneTimer|null} */ let timer = null;
-  let order = ZONE_ORDERS[0].order;
+  /** @type {import('../kai.js').Step[]} */ let steps = planSteps('');
   let tick = 0;
   let hintTimer = 0;
+  let viewKey = '';
   let spotKey = '';
   let watch = zoneWatcher(() => {});
 
   /**
-   * Shows which zone is active / done and moves the brush there.
-   * @param {number} index Position in the brushing order.
+   * Shows the active surface and jaw: highlights, brush position and motion, tooth section.
+   * Only touches the DOM when something changed (the jaw changes mid-step in 3-step mode).
+   * @param {number} index Current step.
+   * @param {number} progress Progress inside the step.
    * @returns {void}
    */
-  function showZone(index) {
-    const zone = order[index];
-    label.textContent = ZONES[zone].label;
-    mouth.zones.forEach((g, z) => {
-      g.classList.toggle('active', z === zone);
-      g.classList.toggle('done', order.indexOf(z) < index);
-    });
-    const c = ZONE_CENTERS[zone];
-    mouth.brush.style.transform = `translate(${c.x}px, ${c.y}px)`;
-    mouth.brushFlip.style.transform = `scale(${zone % 2 ? -1 : 1}, ${zone < 2 ? 1 : -1})`;
+  function showStep(index, progress) {
+    const step = steps[index];
+    const jaw = jawAt(step, progress);
+    const key = `${index}:${jaw}`;
+    if (key === viewKey) return;
+    viewKey = key;
+    label.textContent = stepLabel(step);
+    how.textContent = SURFACES[step.surface].how;
+    mouth.root.dataset.surface = step.surface;
+    mouth.root.dataset.jaw = jaw;
+    tooth.dataset.face = step.surface;
+    tooth.dataset.jaw = jaw;
+    JAW_IDS.forEach((j) => mouth.jaws[j].classList.toggle('active', j === jaw));
+    const pose = BRUSH_POSES[step.surface][jaw];
+    mouth.brush.style.transform = `translate(${pose.x}px, ${pose.y}px)`;
+    mouth.brushFlip.style.transform = `scale(1, ${pose.up ? 1 : -1})`;
+    mouth.brushMotion.setAttribute('class', `brush-motion ${SURFACES[step.surface].motion}`);
   }
 
   /**
-   * Hides sugar spots of the active zone with brushing progress.
-   * @param {number} index Position in order.
-   * @param {number} progress Zone progress 0…1.
+   * Sugar spots disappear and sparkles appear as each jaw gets clean.
+   * @param {number} index Current step.
+   * @param {number} progress Progress inside the step.
    * @returns {void}
    */
   function updateSpots(index, progress) {
-    const gone = Math.floor(progress * (SPOTS_PER_ZONE + 1));
-    const key = `${index}:${gone}`;
+    const gone = JAW_IDS.map((j) => Math.floor(jawProgress(steps, index, progress, j) * (SPOTS_PER_JAW + 1)));
+    const key = gone.join(':');
     if (key === spotKey) return;
     spotKey = key;
-    mouth.zones.forEach((g, z) => {
-      const pos = order.indexOf(z);
-      g.querySelectorAll('.spot').forEach((s, k) => {
-        s.classList.toggle('gone', pos < index || (pos === index && k < gone));
-      });
+    JAW_IDS.forEach((j, n) => {
+      mouth.jaws[j].querySelectorAll('.spot').forEach((s, k) => s.classList.toggle('gone', k < gone[n]));
+      mouth.jaws[j].classList.toggle('done', gone[n] > SPOTS_PER_JAW);
     });
   }
 
   /**
-   * Zone change: chime, label pop and hint text.
-   * @param {number} index New position in order.
+   * Step change: chime, label pop and hint text.
+   * @param {number} index New step.
    * @returns {void}
    */
-  function onZoneChange(index) {
-    showZone(index);
+  function onStepChange(index) {
     ctx.music.chime();
-    hint.textContent = `${TEXT.switchTo} ${ZONES[order[index]].label}!`;
+    hint.textContent = `${TEXT.switchTo} ${stepLabel(steps[index])}!`;
     replayClass(hint, 'show');
     replayClass(label, 'pop');
     window.clearTimeout(hintTimer);
@@ -118,9 +139,9 @@ export function createBrushScreen(ctx) {
   /** Timer tick: update the view. @returns {void} */
   function frame() {
     if (!timer) return;
-    const now = performance.now();
-    const st = timer.state(now);
+    const st = timer.state(performance.now());
     watch(st.zoneIndex);
+    showStep(st.zoneIndex, st.zoneProgress);
     updateSpots(st.zoneIndex, st.zoneProgress);
     ring.set(st.zoneIndex, st.zoneProgress);
     if (st.done) finish(true);
@@ -181,11 +202,11 @@ export function createBrushScreen(ctx) {
     el: section,
     enter() {
       const state = ctx.getState();
-      const found = ZONE_ORDERS.find((o) => o.id === state.settings.zoneOrder);
-      order = (found || ZONE_ORDERS[0]).order;
+      steps = planSteps(state.settings.brushPlan);
       const totalSec = ctx.fast ? TIMER.fastTotalSec : state.settings.totalSec;
-      timer = new ZoneTimer({ totalMs: totalSec * 1000, zoneCount: ZONES.length });
-      watch = zoneWatcher(onZoneChange);
+      timer = new ZoneTimer({ totalMs: totalSec * 1000, zoneCount: steps.length });
+      watch = zoneWatcher(onStepChange);
+      viewKey = '';
       spotKey = '';
       section.classList.remove('paused');
       if (bgLayer.dataset.bg !== state.background) {
@@ -193,7 +214,9 @@ export function createBrushScreen(ctx) {
         bgLayer.append(drawBackground(state.background));
         bgLayer.dataset.bg = state.background;
       }
-      showZone(0);
+      ring.setCount(steps.length);
+      showStep(0, 0);
+      updateSpots(0, 0);
       ring.set(0, 0);
       replayClass(go, 'show');
       timer.start(performance.now());

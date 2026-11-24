@@ -56,7 +56,7 @@ def test_wrong_types_are_repaired(js):
     res = js("""
         const raw = { schema: 1, name: 42, sessions: 'viele', stickers: 'x', outfits: [1, 'glitzer-krone', null],
                       moves: [], wearing: {}, calendar: [], sequins: { a: 5, b: '0110' },
-                      settings: { totalSec: 9999, zoneOrder: 'gibtsnicht', music: 'ja', volume: 7 } };
+                      settings: { totalSec: 9999, brushPlan: 'gibtsnicht', music: 'ja', volume: 7, pianoTempo: 'turbo' } };
         return m.storage.validateState(raw);
     """)
     assert res["name"] == "" and res["sessions"] == 0
@@ -66,7 +66,8 @@ def test_wrong_types_are_repaired(js):
     assert res["sequins"] == {"b": "0110"}
     s = res["settings"]
     assert s["totalSec"] == js("return m.config.TIMER.maxTotalSec;")
-    assert s["zoneOrder"] == js("return m.config.DEFAULT_SETTINGS.zoneOrder;")
+    assert s["brushPlan"] == "kai6" and s["pianoTempo"] == "langsam"
+    assert "zoneOrder" not in s, "old quadrant setting is dropped"
     assert s["music"] is True and s["volume"] == 1
 
 
