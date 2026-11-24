@@ -82,6 +82,8 @@ export const PALETTE = Object.freeze({
   nachthuegel: '#6F8576',
   nachthuegel2: '#7E9585',
   buehnenwand: '#8D7A9C',
+  zucker: '#C9B6E4',
+  tasteWeiss: '#FFFDF8',
 });
 
 /** Colours used for stickers (two per shape). */
@@ -151,12 +153,76 @@ export const BACKGROUNDS = Object.freeze([
   { id: 'regenbogenland', name: 'Regenbogenland' },
 ]);
 
+/** Mini games: play window after brushing. */
+export const GAMES = Object.freeze({
+  defaultMinutes: 5,
+  minMinutes: 0,
+  maxMinutes: 15,
+  /** How often running games check the remaining play time (ms). */
+  checkMs: 1000,
+});
+
 /** Default parent settings. */
 export const DEFAULT_SETTINGS = Object.freeze({
   totalSec: TIMER.defaultTotalSec,
   zoneOrder: 'standard',
   music: true,
   volume: 0.6,
+  /** Minutes of game time after each completed brushing (0 = games off). */
+  playMinutes: GAMES.defaultMinutes,
+});
+
+/** Mini game „Tanzschritte merken“ (Simon-style memory). */
+export const DANCE_GAME = Object.freeze({
+  poses: [
+    { id: 'arme-hoch', name: 'Arme hoch', css: 'move-arme-hoch', note: 72, icon: 'pose-arme' },
+    { id: 'drehung', name: 'Drehung', css: 'move-pirouette', note: 67, icon: 'pose-dreh' },
+    { id: 'huepfer', name: 'Hüpfer', css: 'move-huepfer', note: 64, icon: 'pose-hupf' },
+    { id: 'welle', name: 'Welle', css: 'move-welle', note: 60, icon: 'pose-welle' },
+  ],
+  startLength: 2,
+  maxLength: 8,
+  /** Time each pose is shown, and the pause between poses (ms). */
+  showMs: 1100,
+  gapMs: 250,
+  /** Pauses before showing a sequence and after feedback (ms). */
+  introMs: 900,
+  feedbackMs: 1500,
+});
+
+/** Mini game „Klavier“ (notes glide down to big piano keys). */
+export const PIANO = Object.freeze({
+  keys: [60, 62, 64, 65, 67, 69, 71, 72],
+  keyNames: ['C', 'D', 'E', 'F', 'G', 'A', 'H', 'C'],
+  keyColors: ['rosa', 'pfirsich', 'butter', 'salbei', 'petrol', 'lavendel', 'rosa', 'pfirsich'],
+  /** Delay before the first note reaches the line (ms). */
+  leadInMs: 2500,
+  /** Time a note needs from the top of its lane to the hit line (ms). */
+  travelMs: 2400,
+  /** Forgiving timing: a tap within ± this many ms of a note counts. */
+  hitWindowMs: 350,
+  /** Pause after the last note before the result appears (ms). */
+  endDelayMs: 1500,
+  /** Star thresholds: share of hit notes for 2 and 3 stars. */
+  twoStars: 0.5,
+  threeStars: 0.85,
+  toneSec: 1.2,
+});
+
+/** Mini game „Zuckerjagd“ (tap sugar bugs off the teeth). */
+export const SUGAR = Object.freeze({
+  roundMs: 45000,
+  startDelayMs: 800,
+  toothCount: 16,
+  maxBugs: 3,
+  startLifeMs: 1600,
+  minLifeMs: 900,
+  startSpawnMs: 1000,
+  minSpawnMs: 550,
+  /** Bug radius in mouth drawing units (≈ 70 px wide on the iPad). */
+  bugRadius: 16,
+  hitRadius: 24,
+  puffMs: 400,
 });
 
 /** Calm instrumental music (Web Audio). */
@@ -301,5 +367,32 @@ export const TEXT = Object.freeze({
   versionLocal: 'lokale Entwicklung',
   restoreBtn: 'Sicherung laden',
   backupReminder: 'Eltern: Fortschritt sichern (3 Sek. halten)',
+  games: 'Spiele',
+  playTime: 'Spielzeit',
+  playLeft: 'noch',
+  minutes: 'Min.',
+  playOff: 'aus',
+  playLabel: 'Spielzeit nach dem Putzen',
+  timeUp: 'Spielzeit vorbei – bis zum nächsten Zähneputzen!',
+  toStart: 'Zum Start',
+  best: 'Rekord',
+  danceGame: 'Tanzschritte merken',
+  danceWatch: 'Schau gut zu!',
+  danceYou: 'Jetzt du!',
+  danceAgain: 'Nochmal! Schau noch einmal zu.',
+  danceGreat: 'Super! Jetzt ein Schritt mehr.',
+  danceSteps: 'Schritte',
+  pianoGame: 'Klavier',
+  pianoPick: 'Such dir ein Lied aus:',
+  pianoFree: 'Frei spielen',
+  pianoHits: 'Töne getroffen',
+  pianoAgain: 'Nochmal',
+  pianoOther: 'Anderes Lied',
+  sugarGame: 'Zuckerjagd',
+  sugarHint: 'Tippe die Zuckermonster weg!',
+  sugarStart: 'Los!',
+  sugarResultA: 'Du hast',
+  sugarResultB: 'Zuckermonster weggeputzt!',
+  sugarAgain: 'Nochmal',
   backupSafetyHint: 'Der Fortschritt liegt nur auf diesem Gerät. Beim Löschen der Website-Daten oder des Home-Bildschirm-Symbols geht er verloren – die Sicherung in „Dateien“/iCloud Drive speichern.',
 });

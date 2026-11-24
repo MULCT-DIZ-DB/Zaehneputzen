@@ -77,7 +77,7 @@ def js(harness) -> Callable[..., Any]:
     """Returns a helper that runs a JS function body with app modules available.
 
     The body gets an object ``m`` with all logic modules (config, timer,
-    storage, rewards, sequins, sketch, devmode, backup) and the call argument as ``arg``.
+    storage, rewards, sequins, sketch, devmode, backup, playtime, songs, dancememory, piano, sugarhunt) and the call argument as ``arg``.
 
     Args:
         harness: Module harness page.
@@ -86,9 +86,10 @@ def js(harness) -> Callable[..., Any]:
         ``run(body, arg=None)`` executing ``body`` and returning its result.
     """
     loader = """async ([body, arg]) => {
-        const names = ['config', 'timer', 'storage', 'rewards', 'sequins', 'sketch', 'devmode', 'backup'];
+        const names = ['config', 'timer', 'storage', 'rewards', 'sequins', 'sketch', 'devmode', 'backup', 'playtime',
+                       'songs', 'games/dancememory', 'games/piano', 'games/sugarhunt'];
         const m = {};
-        for (const n of names) { m[n] = await import(`./js/${n}.js`); }
+        for (const n of names) { m[n.split('/').pop()] = await import(`./js/${n}.js`); }
         const fn = new Function('m', 'arg', `return (async () => { ${body} })();`);
         return fn(m, arg);
     }"""
