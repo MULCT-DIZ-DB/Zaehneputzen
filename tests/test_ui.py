@@ -81,9 +81,36 @@ def test_pause_stops_time(app_page):
     page.clock.run_for(fast_total_ms(page) * 2)
     assert active_screen(page) == "screen-brush"
     assert page.inner_text("#zone-label") == "oben links"
-    page.click("#btn-pause")
+    assert not page.is_visible("#btn-pause")
+    page.click("#btn-resume")
     page.clock.run_for(fast_total_ms(page) + 500)
     assert active_screen(page) == "screen-reward"
+
+
+def test_pause_screen_layout(app_page):
+    """Continue button in the centre, cancel cross in a corner."""
+    page = app_page
+    page.click("#btn-start")
+    page.clock.run_for(fast_countdown_ms(page) + 100)
+    page.click("#btn-pause")
+    vw, vh = config.IPAD_LANDSCAPE["width"], config.IPAD_LANDSCAPE["height"]
+    resume = page.locator("#btn-resume").bounding_box()
+    cx, cy = resume["x"] + resume["width"] / 2, resume["y"] + resume["height"] / 2
+    assert abs(cx - vw / 2) < vw * 0.1 and abs(cy - vh / 2) < vh * 0.2
+    stop = page.locator("#btn-stop").bounding_box()
+    assert stop["x"] < vw * 0.15 and stop["y"] < vh * 0.15
+    assert stop["width"] >= config.MIN_TOUCH_TARGET_PX and resume["height"] >= config.MIN_TOUCH_TARGET_PX
+
+
+def test_cancel_cross_ends_without_gift(app_page):
+    page = app_page
+    page.click("#btn-start")
+    page.clock.run_for(fast_countdown_ms(page) + 100)
+    page.click("#btn-pause")
+    page.click("#btn-stop")
+    assert active_screen(page) == "screen-start"
+    page.click("#btn-album")
+    assert page.locator(".sticker-slot.owned").count() == 0
 
 
 def test_progress_survives_reload(app_page, base_url):

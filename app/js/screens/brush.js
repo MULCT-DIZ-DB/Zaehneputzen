@@ -10,7 +10,7 @@ import { drawMouth, ZONE_CENTERS, SPOTS_PER_ZONE, icon } from '../art.js';
 import { drawDancer } from '../dancer.js';
 import { ZoneTimer, zoneWatcher } from '../timer.js';
 import { completeSession } from '../rewards.js';
-import { makeScreen, textButton } from './base.js';
+import { makeScreen, iconButton } from './base.js';
 import { sequinStatesOf } from './start.js';
 
 const RING_R = 44;
@@ -48,9 +48,11 @@ export function createBrushScreen(ctx) {
   const ring = progressRing();
   const dancerBox = el('div', { cls: 'brush-dancer' });
   const pauseBtn = el('button', { cls: 'btn btn-pause', id: 'btn-pause', attrs: { type: 'button', 'aria-label': TEXT.pause } },
-    [icon('pause', 'when-running'), icon('play', 'when-paused')]);
-  const stopBtn = textButton(TEXT.stop, () => finish(false), 'btn-small btn-stop', 'btn-stop');
-  const pausedBox = el('div', { cls: 'paused-box' }, [el('p', { text: TEXT.paused }), stopBtn]);
+    [icon('pause')]);
+  const resumeBtn = el('button', { cls: 'btn btn-big btn-resume', id: 'btn-resume', attrs: { type: 'button' },
+    on: { click: () => setPaused(false) } }, [icon('play'), el('span', { text: TEXT.resume })]);
+  const stopBtn = iconButton('kreuz', TEXT.stop, () => finish(false), 'btn-stop', { id: 'btn-stop' });
+  const pausedBox = el('div', { cls: 'paused-box' }, [stopBtn, el('p', { cls: 'paused-title', text: TEXT.paused }), resumeBtn]);
   body.append(el('div', { cls: 'brush-layout' }, [
     el('div', { cls: 'mouth-wrap' }, [mouth.root]),
     el('div', { cls: 'brush-side' }, [el('div', { cls: 'brush-info' }, [label, ring.root]), dancerBox]),
@@ -169,7 +171,7 @@ export function createBrushScreen(ctx) {
     }
   }
 
-  pauseBtn.addEventListener('click', () => setPaused(!(timer && timer.isPaused())));
+  pauseBtn.addEventListener('click', () => setPaused(true));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') setPaused(true);
   });

@@ -180,6 +180,7 @@ const ICONS = {
   eltern: () => [inked(sketchEllipse(24, 24, 14, 14, 20), C.grau), inked(sketchEllipse(24, 24, 5, 5, 21), C.creme)],
   pause: () => [inked(sketchRect(12, 8, 9, 32, 22), C.petrol), inked(sketchRect(27, 8, 9, 32, 23), C.petrol)],
   play: () => [inked('M14 8 L38 24 L14 40 Z', C.salbei)],
+  kreuz: () => [svg('path', { d: 'M13 13 L35 35 M35 13 L13 35', fill: 'none', stroke: C.rot, 'stroke-width': 8, 'stroke-linecap': 'round' })],
   zurueck: () => [svg('path', { d: 'M30 10 L14 24 L30 38', class: 'ink-line', fill: 'none' })],
   note: () => [inked(sketchEllipse(16, 36, 8, 6, 24), C.petrol), svg('path', { d: 'M23 36 L23 8 L36 14', class: 'ink-line', fill: 'none' })],
 };

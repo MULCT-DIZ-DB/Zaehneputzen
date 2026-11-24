@@ -72,6 +72,7 @@ export const PALETTE = Object.freeze({
   haar: '#8A5A44',
   mund: '#9C6461',
   zunge: '#D98F8B',
+  rot: '#C4655A',
 });
 
 /** Colours used for stickers (two per shape). */
@@ -185,6 +186,21 @@ export const UI = Object.freeze({
   confettiCount: 12,
 });
 
+/** Progress backup file (export/import). */
+export const BACKUP = Object.freeze({
+  kind: 'zahnputz-tanz-sicherung',
+  filePrefix: 'zahnputz-tanz',
+  mime: 'application/json',
+  maxBytes: 1000000,
+  revokeDelayMs: 10000,
+});
+
+/** Developer mode gate: both factors are single digits. */
+export const DEV = Object.freeze({
+  minFactor: 2,
+  maxFactor: 9,
+});
+
 /** All user-visible text (German). */
 export const TEXT = Object.freeze({
   greeting: 'Hallo',
@@ -196,7 +212,7 @@ export const TEXT = Object.freeze({
   pause: 'Pause',
   resume: 'Weiter putzen',
   stop: 'Aufhören',
-  paused: 'Pause – tippe zum Weitermachen',
+  paused: 'Pause',
   switchTo: 'Wechseln! Jetzt',
   brushNow: 'Drück jetzt den Knopf an deiner Zahnbürste!',
   go: 'Los!',
@@ -231,4 +247,18 @@ export const TEXT = Object.freeze({
   months: 'Januar Februar März April Mai Juni Juli August September Oktober November Dezember',
   stickersCount: 'Sticker',
   glitter: 'Glitzer',
+  moves: 'Tanzschritte',
+  devMode: 'Entwicklermodus',
+  devCheck: 'Prüfen',
+  devWrong: 'Leider falsch – hier ist eine neue Aufgabe.',
+  devActive: 'Entwicklermodus aktiv: alles ist freigeschaltet. Echter Fortschritt bleibt unverändert.',
+  devOff: 'Ausschalten',
+  devBadge: 'Entwickler',
+  backupTitle: 'Sicherung',
+  exportBtn: 'Fortschritt exportieren',
+  importBtn: 'Fortschritt importieren',
+  backupHint: 'Die Datei z. B. per AirDrop, Mail oder „Dateien“ auf das andere Gerät bringen und dort importieren.',
+  importConfirm: 'Den Fortschritt auf diesem Gerät durch die Sicherung ersetzen?',
+  importOk: 'Fortschritt geladen!',
+  importBad: 'Diese Datei ist keine gültige Zahnputz-Tanz-Sicherung.',
 });

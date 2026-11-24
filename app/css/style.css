@@ -155,8 +155,12 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .btn-pause { position: absolute; right: 24px; bottom: 24px; width: 96px; height: 96px; padding: 0; border-radius: 50%; z-index: 3;
   display: flex; align-items: center; justify-content: center; }
 .btn-pause .icon { width: 52px; height: 52px; }
-.btn-pause .when-paused, .paused .btn-pause .when-running { display: none; }
-.paused .btn-pause .when-paused { display: block; }
+.paused .btn-pause { display: none; }
+.btn-resume { display: inline-flex; align-items: center; gap: 16px; font-size: 52px; padding: 16px 48px; }
+.btn-resume .icon { width: 64px; height: 64px; }
+.paused-title { font-size: 56px; }
+.btn-stop { position: absolute; top: 16px; left: 20px; width: 80px; height: 80px; padding: 0; border-radius: 50%; }
+.btn-stop .icon { width: 52px; height: 52px; }
 .paused-box { display: none; position: absolute; inset: 0; z-index: 2; background: rgba(247, 241, 227, 0.88);
   flex-direction: column; align-items: center; justify-content: center; gap: 28px; font-size: 42px; text-align: center; }
 .paused .paused-box { display: flex; }
@@ -207,6 +211,28 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .wardrobe-item .outfit-preview { width: 110px; height: 80px; overflow: visible; }
 .wardrobe-item.worn { background: var(--butter); border-width: 4px; }
 .wardrobe-item.glitter { border-style: dashed; }
+.moves-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.moves-title { font-size: 28px; width: 100%; }
+.move-item.worn { background: var(--butter); }
+.dev-badge { position: absolute; top: 18px; left: 20px; z-index: 2; font-size: 22px; padding: 4px 14px;
+  background: var(--lavendel); border: 2px solid var(--tinte); border-radius: var(--wobble); }
+.dev-panel { max-width: 760px; width: 100%; margin: 24px auto 0; display: flex; flex-direction: column; gap: 12px; font-size: 26px; }
+.dev-row { display: flex; align-items: center; gap: 14px; }
+.dev-question { font-size: 34px; }
+.dev-row input { font-family: var(--font); font-size: 30px; width: 110px; min-height: 56px; padding: 6px 12px;
+  border: 3px solid var(--tinte); border-radius: 14px; background: var(--papier); color: var(--tinte); -webkit-user-select: text; user-select: text; }
+.dev-wrong { color: #9C6461; }
+.dev-active { display: flex; align-items: center; gap: 16px; }
+.screen-parents .screen-body { overflow-y: auto; }
+.backup-panel { max-width: 760px; width: 100%; margin: 28px auto 0; display: flex; flex-direction: column; gap: 10px; }
+.panel-title { font-size: 32px; }
+.backup-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.backup-row label.btn { display: inline-flex; align-items: center; }
+.backup-hint { font-size: 22px; }
+.backup-msg { font-size: 26px; min-height: 30px; }
+.backup-msg.ok { color: #5E8A55; }
+.backup-msg.bad { color: #9C6461; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .empty { font-size: 32px; text-align: center; margin-top: 40px; }
 
 /* ---------- Calendar ---------- */
