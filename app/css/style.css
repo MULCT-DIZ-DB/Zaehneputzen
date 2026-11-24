@@ -248,6 +248,7 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .backup-msg { font-size: 26px; min-height: 30px; }
 .backup-msg.ok { color: #5E8A55; }
 .backup-msg.bad { color: #9C6461; }
+.app-version { max-width: 760px; width: 100%; margin: 28px auto 8px; font-size: 20px; opacity: 0.6; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .empty { font-size: 32px; text-align: center; margin-top: 40px; }
 

@@ -6,7 +6,7 @@
 const CACHE_NAME = 'zahnputz-tanz';
 const NETWORK_TIMEOUT_MS = 3000;
 const PRECACHE = [
-  './', './index.html', './manifest.webmanifest', './css/style.css', './fonts/PatrickHand-Regular.ttf',
+  './', './index.html', './manifest.webmanifest', './version.json', './js/version.js', './css/style.css', './fonts/PatrickHand-Regular.ttf',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './js/app.js', './js/config.js', './js/dom.js', './js/sketch.js', './js/art.js', './js/dancer.js', './js/stickers.js',
   './js/timer.js', './js/storage.js', './js/rewards.js', './js/sequins.js', './js/music.js', './js/wakelock.js', './js/devmode.js', './js/backup.js', './js/backgrounds.js',

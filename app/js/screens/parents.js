@@ -9,6 +9,7 @@ import { defaultState } from '../storage.js';
 import { makeScreen, textButton } from './base.js';
 import { createDevPanel } from './devpanel.js';
 import { createBackupPanel } from './backuppanel.js';
+import { loadVersion, formatVersion } from '../version.js';
 
 /**
  * Labelled form row.
@@ -68,6 +69,9 @@ export function createParentsScreen(ctx) {
     row(TEXT.musicLabel, music),
     row(TEXT.volumeLabel, volume),
   ]), el('div', { cls: 'parents-actions' }, [reset, close]), backup.el, dev.el);
+  const version = el('p', { cls: 'app-version', id: 'app-version' });
+  body.append(version);
+  loadVersion().then((info) => { version.textContent = formatVersion(info); });
 
   /** Fills the form from the state. @returns {void} */
   function fillForm() {
