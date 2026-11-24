@@ -115,3 +115,15 @@ def test_reset_clears(js):
         return m.storage.loadState(mem).sessions;
     """)
     assert res == 0
+
+
+def test_audio_modes(js):
+    res = js("""
+        const C = m.config;
+        return [C.AUDIO_MODES.map(a => [a.id, a.latencyHint]), C.DEFAULT_SETTINGS.audioMode,
+                m.storage.validateState({ settings: { audioMode: 'laut' } }).settings.audioMode,
+                m.storage.validateState({ settings: { audioMode: 'schnell' } }).settings.audioMode];
+    """)
+    modes, default, repaired, kept = res
+    assert modes == [["stabil", "playback"], ["schnell", "interactive"]]
+    assert default == "stabil" and repaired == "stabil" and kept == "schnell"

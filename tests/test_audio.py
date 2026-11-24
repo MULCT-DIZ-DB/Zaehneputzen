@@ -60,3 +60,21 @@ def test_fast_sliding_free_play(chromium_harness):
     res = render(chromium_harness, taps, seconds=4.5)
     assert res["peak"] <= 1.0 and res["jump"] < CLICK_JUMP, res
     assert res["maxActive"] <= res["maxVoices"], res
+
+
+def test_audio_mode_recreates_context(chromium_harness):
+    """Switching between stable and fast audio closes the old audio engine; the next tap builds a new one."""
+    res = chromium_harness.evaluate("""async () => {
+        const { Music } = await import('./js/music.js');
+        const mu = new Music();
+        mu.configure({ music: true, volume: 0.5, audioMode: 'schnell' });
+        mu.unlock();
+        const first = mu.ctx, hint1 = mu.latencyHint;
+        mu.configure({ music: true, volume: 0.5, audioMode: 'schnell' });
+        const same = mu.ctx === first;
+        mu.configure({ music: true, volume: 0.5, audioMode: 'stabil' });
+        const cleared = mu.ctx === null;
+        mu.unlock();
+        return [hint1, same, cleared, mu.latencyHint, mu.ctx !== null && mu.ctx !== first];
+    }""")
+    assert res == ["interactive", True, True, "playback", True]

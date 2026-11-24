@@ -5,7 +5,7 @@
  * so `unlock()` must be called from a touch/click handler.
  * @module music
  */
-import { MUSIC } from './config.js';
+import { MUSIC, AUDIO_MODES } from './config.js';
 
 /**
  * Converts a MIDI note number to a frequency in Hz.
@@ -47,6 +47,8 @@ export class Music {
     /** @type {BiquadFilterNode|null} */ this.filter = null;
     this.enabled = true;
     this.volume = 1;
+    /** Browser audio buffer size wish: 'playback' (stable) or 'interactive' (fast). */
+    this.latencyHint = AUDIO_MODES[0].latencyHint;
     this.song = buildSong();
     this.timerId = 0;
     this.nextIndex = 0;
@@ -59,10 +61,16 @@ export class Music {
    */
   unlock() {
     try {
+      if (this.ctx && /** @type {AudioContext} */ (this.ctx).state === 'closed') this.ctx = null;
       if (!this.ctx) {
         const Ctor = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
         if (!Ctor) return;
-        const context = new Ctor();
+        let context;
+        try {
+          context = new Ctor({ latencyHint: this.latencyHint });
+        } catch {
+          context = new Ctor(); // older engines without options
+        }
         this.attach(context);
         const silent = context.createBuffer(1, 1, 22050);
         const src = context.createBufferSource();
@@ -97,14 +105,34 @@ export class Music {
   }
   /**
    * Updates settings.
-   * @param {{music: boolean, volume: number}} settings Parent settings.
+   * @param {{music: boolean, volume: number, audioMode?: string}} settings Parent settings.
    * @returns {void}
    */
-  configure({ music, volume }) {
+  configure({ music, volume, audioMode }) {
+    const mode = AUDIO_MODES.find((a) => a.id === audioMode) || AUDIO_MODES[0];
+    if (mode.latencyHint !== this.latencyHint) {
+      this.latencyHint = mode.latencyHint;
+      this.close(); // the next tap builds an engine with the new buffer size
+    }
     this.enabled = music;
     this.volume = volume;
     this.applyVolume();
     if (!music) this.stop();
+  }
+
+  /**
+   * Shuts the audio engine down (it is rebuilt on the next unlock).
+   * @returns {void}
+   */
+  close() {
+    this.stop();
+    const live = /** @type {AudioContext|null} */ (this.ctx);
+    if (live && typeof live.close === 'function') live.close().catch(() => {});
+    this.ctx = null;
+    this.master = null;
+    this.filter = null;
+    this.live = [];
+    this.toneBuffers = new Map();
   }
 
   /** @returns {void} */

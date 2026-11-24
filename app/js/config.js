@@ -168,10 +168,20 @@ export const GAMES = Object.freeze({
   checkMs: 1000,
 });
 
+/**
+ * Audio engine modes. "stabil" asks the browser for larger audio buffers (latencyHint 'playback'):
+ * a little more delay, but far fewer dropouts/crackles on older devices like the iPad 5.
+ */
+export const AUDIO_MODES = Object.freeze([
+  { id: 'stabil', name: 'Stabil (empfohlen für ältere iPads)', latencyHint: 'playback' },
+  { id: 'schnell', name: 'Schnell (geringste Verzögerung)', latencyHint: 'interactive' },
+]);
+
 /** Default parent settings. */
 export const DEFAULT_SETTINGS = Object.freeze({
   totalSec: TIMER.defaultTotalSec,
   brushPlan: 'kai6',
+  audioMode: 'stabil',
   /** Piano game tempo: 'langsam' | 'mittel' | 'normal'. */
   pianoTempo: 'langsam',
   music: true,
@@ -369,6 +379,7 @@ export const TEXT = Object.freeze({
   totalLabel: 'Putzzeit',
   seconds: 'Sekunden',
   orderLabel: 'Putz-Reihenfolge',
+  audioLabel: 'Klang (Klavier, Musik)',
   toothOuter: 'außen',
   toothInner: 'innen',
   pianoTempoLabel: 'Tempo:',
