@@ -357,9 +357,14 @@ h1, h2, p { margin: 0; font-weight: normal; }
   background: var(--butter); opacity: 0; }
 .piano-lane.sparkle-lane::after { animation: lane-flash 0.45s ease-out; }
 .piano-note { position: absolute; left: 50%; top: -28px; width: 56px; height: 56px; margin-left: -28px; border-radius: 50%;
-  background: var(--key-color); border: 3px solid var(--tinte); animation-name: note-fall; animation-timing-function: linear;
-  animation-fill-mode: forwards; transition: opacity 0.25s; }
+  background: var(--key-color); border: 3px solid var(--tinte); transition: opacity 0.25s; }
 .piano-note.hit { opacity: 0; }
+/* Too late: the note fades so it is clear it can no longer be hit. */
+.piano-note.missed { opacity: 0.3; }
+/* Every key press lights its lane softly; a hit adds the golden glow (::after). */
+.piano-lane::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 70%;
+  background: linear-gradient(to top, var(--key-color), transparent); opacity: 0; }
+.piano-lane.touched::before { animation: lane-touch 0.4s ease-out; }
 .piano-keys { display: flex; gap: 6px; height: 150px; }
 .piano-key { flex: 1; min-width: 0; padding: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px;
   font-size: 30px; background: var(--papier); border-radius: 0 0 18px 18px; border-bottom: 14px solid var(--key-color); }
@@ -394,7 +399,7 @@ h1, h2, p { margin: 0; font-weight: normal; }
   .piano-key { font-size: 24px; }
 }
 
-@keyframes note-fall { from { transform: translateY(0); } to { transform: translateY(var(--fall)); } }
+@keyframes lane-touch { 0% { opacity: 0.45; } 100% { opacity: 0; } }
 @keyframes key-press { 0% { transform: translateY(0); } 40% { transform: translateY(5px); } 100% { transform: translateY(0); } }
 @keyframes lane-flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
 @keyframes bar-shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }

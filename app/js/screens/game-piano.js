@@ -1,14 +1,14 @@
 // @ts-check
 /**
  * Mini game „Klavier“: notes glide down to 8 big piano keys; tap the key when a note
- * reaches the line. Falling is a pure CSS animation (no per-frame script); hits are
- * judged by time. Also a free-play mode.
+ * reaches the line. Falling is a transform-only Web Animation synced to the song clock
+ * (no per-frame script); hits are judged by time. Also a free-play mode.
  * @module screens/game-piano
  */
 import { TEXT, PIANO, PALETTE } from '../config.js';
 import { el, clear, replayClass } from '../dom.js';
 import { SONGS } from '../songs.js';
-import { buildChart, judgeTap, starsFor } from '../games/piano.js';
+import { buildChart, judgeTap, starsFor, fallProgressMs } from '../games/piano.js';
 import { makeGameScreen, playOpen } from './gamekit.js';
 import { textButton } from './base.js';
 
@@ -23,7 +23,8 @@ export function createPianoGameScreen(ctx) {
     onExpire: () => { if (mode !== 'song') kit.showTimeUp(); },
   });
   const hitsText = el('p', { cls: 'game-status', id: 'piano-hits' });
-  const lanes = el('div', { cls: 'piano-lanes' }, PIANO.keys.map((_, i) => el('div', { cls: 'piano-lane', attrs: { 'data-lane': i } })));
+  const lanes = el('div', { cls: 'piano-lanes' }, PIANO.keys.map((_, i) => el('div', { cls: 'piano-lane',
+    attrs: { 'data-lane': i, style: `--key-color: ${PALETTE[PIANO.keyColors[i]]}` } })));
   const keys = PIANO.keys.map((midi, lane) => el('button', {
     cls: 'btn piano-key', attrs: { type: 'button', 'data-lane': lane, 'aria-label': PIANO.keyNames[lane],
       style: `--key-color: ${PALETTE[PIANO.keyColors[lane]]}` },
@@ -86,19 +87,27 @@ export function createPianoGameScreen(ctx) {
   }
 
   /**
-   * Lets one note fall in its lane (CSS animation) when it is due.
+   * Lets one note fall in its lane. The animation is synced to the song clock: if the
+   * spawn timer fired late (busy iPad), the note starts further down, so it always
+   * crosses the line exactly at its hit time. The lane height is measured now, so a
+   * rotation during the song is handled.
    * @param {number} i Chart index.
-   * @param {number} fallPx Distance from the lane top to the hit line.
    * @returns {void}
    */
-  function spawnNote(i, fallPx) {
+  function spawnNote(i) {
     const n = chart[i];
-    const note = el('div', { cls: 'piano-note', attrs: {
-      style: `--fall: ${Math.round(fallPx * PIANO.overshoot)}px; animation-duration: ${Math.round(PIANO.travelMs * PIANO.overshoot)}ms;`
-        + ` --key-color: ${PALETTE[PIANO.keyColors[n.lane]]}` } });
-    note.addEventListener('animationend', () => { note.remove(); noteEls.delete(i); });
+    const total = PIANO.travelMs * PIANO.overshoot;
+    const fallPx = lanes.clientHeight * PIANO.overshoot;
+    const note = el('div', { cls: 'piano-note', attrs: { 'data-i': i, style: `--key-color: ${PALETTE[PIANO.keyColors[n.lane]]}` } });
     lanes.children[n.lane].append(note);
     noteEls.set(i, note);
+    const late = fallProgressMs(n.timeMs, performance.now() - startedAt);
+    const anim = note.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${Math.round(fallPx)}px)` }],
+      { duration: total, easing: 'linear', fill: 'forwards' });
+    anim.currentTime = late;
+    timers.push(window.setTimeout(() => { note.remove(); noteEls.delete(i); }, Math.max(0, total - late)));
+    timers.push(window.setTimeout(() => { if (!hits.has(i)) note.classList.add('missed'); },
+      Math.max(0, PIANO.travelMs + PIANO.hitWindowMs + 1 - late)));
   }
 
   /**
@@ -113,9 +122,8 @@ export function createPianoGameScreen(ctx) {
     hits = new Set();
     setMode('song');
     hitsText.textContent = `0 / ${chart.length} ${TEXT.pianoHits}`;
-    const fallPx = lanes.clientHeight;
     startedAt = performance.now();
-    chart.forEach((n, i) => timers.push(window.setTimeout(() => spawnNote(i, fallPx), Math.max(0, n.timeMs - PIANO.travelMs))));
+    chart.forEach((n, i) => timers.push(window.setTimeout(() => spawnNote(i), Math.max(0, n.timeMs - PIANO.travelMs))));
     const end = chart[chart.length - 1].timeMs + PIANO.endDelayMs;
     timers.push(window.setTimeout(finishSong, end));
   }
@@ -140,6 +148,7 @@ export function createPianoGameScreen(ctx) {
     ctx.music.tone(midi, PIANO.toneSec);
     kit.section.dataset.last = String(midi);
     replayClass(keys[lane], 'pressed');
+    replayClass(lanes.children[lane], 'touched');
     if (mode !== 'song') return;
     const i = judgeTap(chart, hits, lane, performance.now() - startedAt);
     if (i === null) return;

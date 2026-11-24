@@ -90,6 +90,20 @@ def test_hit_window_edges(js):
     assert res == [0, 0, 0, None, None, 2, None, 1]
 
 
+def test_fall_progress(js):
+    res = js("""
+        const P = m.config.PIANO;
+        const t = 5000;
+        return [m.piano.fallProgressMs(t, t - P.travelMs), m.piano.fallProgressMs(t, t - P.travelMs - 500),
+                m.piano.fallProgressMs(t, t), m.piano.fallProgressMs(t, t - 1000), m.piano.fallProgressMs(t, t + 99999),
+                P.travelMs, P.travelMs * P.overshoot];
+    """)
+    on_time, early, at_line, late, way_late, travel, full = res
+    assert on_time == 0 and early == 0, "spawned on time starts at the top"
+    assert at_line == travel and late == travel - 1000
+    assert way_late == full
+
+
 @pytest.mark.parametrize("hit,total,stars", [(0, 10, 1), (5, 10, 2), (10, 10, 3), (9, 10, 3), (0, 0, 1)])
 def test_stars(js, hit, total, stars):
     assert js("return m.piano.starsFor(arg[0], arg[1]);", [hit, total]) == stars

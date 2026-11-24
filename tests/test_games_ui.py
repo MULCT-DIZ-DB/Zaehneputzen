@@ -123,6 +123,61 @@ def test_piano_hit_and_free_play(app_page):
     assert not page.console_errors, page.console_errors
 
 
+def start_entchen(page):
+    """Opens the piano game and starts 'Alle meine Entchen'; returns the chart."""
+    open_hub(page)
+    page.click("#btn-game-piano")
+    page.click(".song-btn[data-song='entchen']")
+    return page.evaluate("import('./js/songs.js').then(s => import('./js/games/piano.js').then(p =>"
+                         " p.buildChart(s.SONGS.find(x => x.id === 'entchen'))))")
+
+
+def test_piano_missed_note_is_marked(app_page):
+    """A note counts as missed once it is more than the hit window past the line – and then looks missed."""
+    page = app_page
+    chart = start_entchen(page)
+    window = cfg(page, "PIANO.hitWindowMs")
+    page.clock.run_for(chart[0]["timeMs"] + window - 30)
+    assert "missed" not in (page.get_attribute(".piano-note[data-i='0']", "class") or "")
+    page.clock.run_for(60)
+    assert "missed" in page.get_attribute(".piano-note[data-i='0']", "class")
+    page.click(f".piano-key[data-lane='{chart[0]['lane']}']")
+    assert page.inner_text("#piano-hits").strip().startswith("0"), "too late is not a hit"
+
+
+def test_piano_hit_note_is_marked(app_page):
+    page = app_page
+    chart = start_entchen(page)
+    page.clock.run_for(chart[0]["timeMs"] - 200)
+    page.click(f".piano-key[data-lane='{chart[0]['lane']}']")
+    assert "hit" in page.get_attribute(".piano-note[data-i='0']", "class")
+
+
+def test_every_key_press_lights_its_lane(app_page):
+    """Feedback above the key on every press, not only on hits."""
+    page = app_page
+    open_hub(page)
+    page.click("#btn-game-piano")
+    page.click("#btn-piano-free")
+    page.click(".piano-key[data-lane='2']")
+    assert "touched" in page.get_attribute(".piano-lane[data-lane='2']", "class")
+
+
+def test_piano_notes_follow_the_clock(app_page):
+    """Each note's fall animation is synced to the song clock, even if its spawn timer fires late."""
+    page = app_page
+    chart = start_entchen(page)
+    page.clock.fast_forward(chart[0]["timeMs"] - 1000)  # the spawn timer fires much too late, like on a busy iPad
+    info = page.evaluate("""() => {
+        const n = document.querySelector(".piano-note[data-i='0']");
+        const a = n.getAnimations()[0];
+        return [a.currentTime, a.effect.getTiming().duration];
+    }""")
+    travel = cfg(page, "PIANO.travelMs")
+    # Without the sync the note would start at the top (≈ 0 ms); real time between spawn and reading adds a little.
+    assert abs(info[0] - (travel - 1000)) < 150, info
+
+
 def test_piano_song_ends_with_stars(app_page):
     page = app_page
     open_hub(page)

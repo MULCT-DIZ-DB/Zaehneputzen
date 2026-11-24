@@ -49,6 +49,19 @@ export function judgeTap(chart, hits, lane, tMs) {
 }
 
 /**
+ * How far (in ms of its fall) a note should already be when it appears at `nowMs`.
+ * 0 = at the top; `travelMs` = crossing the line. Keeps the picture in step with the
+ * song clock when a timer fires late.
+ * @param {number} noteTimeMs When the note reaches the line (since song start).
+ * @param {number} nowMs Current song time.
+ * @returns {number} Milliseconds, between 0 and the full fall (with overshoot).
+ */
+export function fallProgressMs(noteTimeMs, nowMs) {
+  const progress = nowMs - (noteTimeMs - PIANO.travelMs);
+  return Math.min(PIANO.travelMs * PIANO.overshoot, Math.max(0, progress));
+}
+
+/**
  * Stars for a song (always at least one – no failing).
  * @param {number} hitCount Notes hit.
  * @param {number} total Notes in the song.
