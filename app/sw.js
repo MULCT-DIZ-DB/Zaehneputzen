@@ -13,6 +13,9 @@ const PRECACHE = [
   './js/screens/base.js', './js/screens/start.js', './js/screens/countdown.js', './js/screens/brush.js',
   './js/screens/reward.js', './js/screens/album.js', './js/screens/dress.js', './js/screens/calendar.js',
   './js/screens/parents.js', './js/screens/devpanel.js', './js/screens/backuppanel.js', './js/screens/backgrounds.js',
+  './js/songs.js', './js/playtime.js', './js/games/dancememory.js', './js/games/piano.js', './js/games/sugarhunt.js',
+  './js/screens/gamekit.js', './js/screens/games.js', './js/screens/game-dance.js', './js/screens/game-piano.js',
+  './js/screens/game-sugar.js',
 ];
 
 /**

@@ -7,7 +7,11 @@ Eine ruhige, gezeichnete Zahnputz-App für Kinder – gedacht als flüssige Alte
 - **Geschenke**: Sticker-Album (30 Sticker, jeder 4. glitzert), Kleider für die Tänzerin (alle 5 Putzrunden), Tanzschritte (3/7/14/21/30 Tage in Folge), Kalender mit Sonne (morgens) und Mond (abends). Höchstens 2 Geschenke pro Tag.
 - **Wende-Pailletten**: Pailletten-Rock und -Top lassen sich beim Anziehen mit dem Finger umstreichen (runter = andere Farbe, hoch = zurück).
 - **Musik**: ruhige, langsame Instrumentalmusik, live im Browser erzeugt (keine Audiodateien, keine Lizenzfragen). Abschaltbar.
-- **Eltern-Menü**: Zahnrad oben rechts **3 Sekunden gedrückt halten** → Name, Putzzeit (60–150 s), Reihenfolge, Musik, Lautstärke, Fortschritt löschen.
+- **Mini-Spiele** (nur nach dem Zähneputzen, Standard 5 Minuten, im Eltern-Menü 0–15 Min. einstellbar, 0 = aus; keine Geschenke, nur ein Rekord):
+  - **Tanzschritte merken** – die Tänzerin zeigt Posen vor, das Kind tippt sie nach (2 bis 8 Schritte, kein „Verloren“).
+  - **Klavier** – Töne gleiten auf 8 große Tasten (C–C); im richtigen Moment tippen. Lieder: Alle meine Entchen, Ode an die Freude, Morgen kommt der Weihnachtsmann, Hänschen klein, Wiegenlied (Brahms) – plus „Frei spielen“.
+  - **Zuckerjagd** – Zuckermonster auf den Zähnen wegtippen, 45 Sekunden pro Runde.
+- **Eltern-Menü**: Zahnrad oben rechts **3 Sekunden gedrückt halten** → Name, Putzzeit (60–150 s), Reihenfolge, Musik, Lautstärke, Spielzeit, Fortschritt löschen.
 
 Alles bleibt auf dem Gerät (localStorage) – es werden keine Daten verschickt.
 
