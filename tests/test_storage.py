@@ -16,7 +16,7 @@ def test_default_state_shape_and_types(js):
 def test_round_trip(js):
     res = js("""
         const st = m.storage.defaultState();
-        st.name = 'Clara'; st.stickers = ['stern-rosa']; st.sessions = 3;
+        st.name = 'Testkind'; st.stickers = ['stern-rosa']; st.sessions = 3;
         st.calendar['2026-11-24'] = { morgens: true, abends: false };
         st.sequins['pailletten-rock'] = '0101';
         const mem = m.storage.memoryStorage();
@@ -25,7 +25,7 @@ def test_round_trip(js):
     """)
     ok, loaded = res
     assert ok is True
-    assert loaded["name"] == "Clara" and loaded["stickers"] == ["stern-rosa"] and loaded["sessions"] == 3
+    assert loaded["name"] == "Testkind" and loaded["stickers"] == ["stern-rosa"] and loaded["sessions"] == 3
     assert loaded["calendar"]["2026-11-24"] == {"morgens": True, "abends": False}
     assert loaded["sequins"]["pailletten-rock"] == "0101"
 

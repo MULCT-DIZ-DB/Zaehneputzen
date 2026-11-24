@@ -200,9 +200,9 @@ def test_parent_menu_sets_name(app_page):
     page = app_page
     open_parents(page)
     assert active_screen(page) == "screen-parents"
-    page.fill("#input-name", "Clara")
+    page.fill("#input-name", "Testkind")
     page.click("#btn-parents-close")
-    assert "Clara" in page.inner_text("#greeting")
+    assert "Testkind" in page.inner_text("#greeting")
 
 
 def test_calendar_and_dress_screens_open(app_page):

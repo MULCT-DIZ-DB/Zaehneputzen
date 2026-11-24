@@ -59,5 +59,17 @@ PERF_SAMPLE_MS = 3000
 #: Fixed start time of the fake browser clock in UI tests (ISO, Berlin morning slot).
 TEST_CLOCK_START = "2026-11-24T08:00:00+01:00"
 
+#: Local, git-ignored list of personal terms (names, user/computer names) that must never be committed.
+PRIVATE_TERMS_FILE = PROJECT_ROOT / ".private-terms"
+
+#: E-mail addresses ending like this are allowed (anonymous commit/attribution addresses).
+ALLOWED_EMAIL_SUFFIXES = ("@users.noreply.github.com", "noreply@anthropic.com")
+
+#: Third-party files that must contain their author's contact (licence texts).
+LICENCE_FILES = ("app/fonts/OFL.txt",)
+
+#: Private network addresses allowed in files (loopback/any – not machine specific).
+ALLOWED_IPS = ("127.0.0.1", "0.0.0.0", "10.255.255.255")  # last one: fixed probe address in serve.local_ip()
+
 #: Fake URL used to load an empty same-origin page for module tests.
 HARNESS_PATH = "/__harness__.html"

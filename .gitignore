@@ -7,3 +7,5 @@ playwright-report/
 .vscode/
 .DS_Store
 Thumbs.db
+# Local list of personal terms for tools/privacy_check.py - never commit
+.private-terms

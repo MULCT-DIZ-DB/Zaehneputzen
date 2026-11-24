@@ -6,7 +6,7 @@ from test_devmode import solve
 
 PRE = """
 const st = m.storage.defaultState();
-st.name = 'Clara'; st.stickers = ['stern-rosa', 'herz-salbei']; st.outfits = ['tutu']; st.sessions = 7;
+st.name = 'Testkind'; st.stickers = ['stern-rosa', 'herz-salbei']; st.outfits = ['tutu']; st.sessions = 7;
 st.wearing = ['tutu']; st.calendar['2026-11-24'] = { morgens: true, abends: false };
 """
 
@@ -19,7 +19,7 @@ def test_backup_round_trip(js):
     parsed, raw = res
     assert parsed["ok"] is True
     s = parsed["state"]
-    assert s["name"] == "Clara" and s["stickers"] == ["stern-rosa", "herz-salbei"] and s["sessions"] == 7
+    assert s["name"] == "Testkind" and s["stickers"] == ["stern-rosa", "herz-salbei"] and s["sessions"] == 7
     assert s["calendar"]["2026-11-24"] == {"morgens": True, "abends": False}
     assert raw["kind"] == js("return m.config.BACKUP.kind;")
     assert raw["schema"] == js("return m.config.SCHEMA_VERSION;")
@@ -87,7 +87,7 @@ def test_import_replaces_progress(app_page):
     backup = page.evaluate("""async () => {
         const c = await import('./js/config.js');
         return JSON.stringify({ kind: c.BACKUP.kind, schema: c.SCHEMA_VERSION, exportedAt: 'x',
-            state: { name: 'Clara', stickers: c.STICKERS.slice(0, 5).map(s => s.id), outfits: ['tutu'] } });
+            state: { name: 'Testkind', stickers: c.STICKERS.slice(0, 5).map(s => s.id), outfits: ['tutu'] } });
     }""")
     page.on("dialog", lambda d: d.accept())
     open_parents(page)
@@ -95,7 +95,7 @@ def test_import_replaces_progress(app_page):
                                                   "buffer": backup.encode("utf-8")}])
     page.wait_for_selector("#backup-msg.ok")
     page.click("#btn-parents-close")
-    assert "Clara" in page.inner_text("#greeting")
+    assert "Testkind" in page.inner_text("#greeting")
     page.click("#btn-album")
     assert page.locator(".sticker-slot.owned").count() == 5
 
@@ -185,13 +185,13 @@ def test_restore_from_start_screen(app_page):
     backup = page.evaluate("""async () => {
         const c = await import('./js/config.js');
         return JSON.stringify({ kind: c.BACKUP.kind, schema: c.SCHEMA_VERSION, exportedAt: 'x',
-            state: { name: 'Clara', sessions: 3, stickers: c.STICKERS.slice(0, 3).map(s => s.id) } });
+            state: { name: 'Testkind', sessions: 3, stickers: c.STICKERS.slice(0, 3).map(s => s.id) } });
     }""")
     page.on("dialog", lambda d: d.accept())
     page.set_input_files("#input-restore", files=[{"name": "s.json", "mimeType": "application/json",
                                                    "buffer": backup.encode("utf-8")}])
     page.wait_for_selector("#btn-restore", state="hidden")
-    assert "Clara" in page.inner_text("#greeting")
+    assert "Testkind" in page.inner_text("#greeting")
     page.click("#btn-album")
     assert page.locator(".sticker-slot.owned").count() == 3
     assert not page.console_errors, page.console_errors

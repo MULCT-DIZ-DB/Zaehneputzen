@@ -44,7 +44,7 @@ py -3 -m venv .venv
 .venv\Scripts\python tools\serve.py
 ```
 
-Die Ausgabe zeigt die Adresse fürs iPad (z. B. `http://192.168.178.20:8080`). iPad und Laptop müssen im selben WLAN sein; beim ersten Start fragt die Windows-Firewall – „Private Netzwerke“ erlauben. Kommt keine Abfrage und das Handy/iPad erreicht die App nicht, einmalig in einer Admin-PowerShell freigeben:
+Die Ausgabe zeigt die Adresse fürs iPad (z. B. `http://<Laptop-IP>:8080`). iPad und Laptop müssen im selben WLAN sein; beim ersten Start fragt die Windows-Firewall – „Private Netzwerke“ erlauben. Kommt keine Abfrage und das Handy/iPad erreicht die App nicht, einmalig in einer Admin-PowerShell freigeben:
 
 ```
 New-NetFirewallRule -DisplayName "Zahnputz-App Dev-Server (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
@@ -80,6 +80,15 @@ Alternativen ohne GitHub: **Netlify Drop** (<https://app.netlify.com/drop>, Ordn
 2. Einmal online öffnen, danach funktioniert sie offline.
 3. Empfehlung: *Einstellungen → Anzeige & Helligkeit → Automatische Sperre* auf mindestens **5 Minuten**, damit der Bildschirm beim Putzen sicher an bleibt (iOS 16 unterstützt das automatische Wachhalten in Home-Bildschirm-Apps nur eingeschränkt).
 4. Optional: *Einstellungen → Bedienungshilfen → Geführter Zugriff*, damit das Kind in der App bleibt.
+
+## Datenschutz im Repository
+
+Das Repository darf keine persönlichen Daten oder Angaben zum eigenen Rechner enthalten.
+
+- `tools/privacy_check.py` sucht nach privaten Begriffen, persönlichen Ordnerpfaden, E-Mail-Adressen (außer noreply) und privaten IP-Adressen. `tests/test_privacy.py` prüft alle Dateien bei jedem Testlauf.
+- Die privaten Begriffe (z. B. Name des Kindes, Benutzer- und Computername) stehen in der lokalen Datei `.private-terms` – sie ist per `.gitignore` ausgeschlossen und wird nie hochgeladen. Eine Zeile pro Begriff.
+- Einmal pro Klon `.venv\Scripts\python tools\install_hooks.py` ausführen: Danach blockieren Git-Hooks jeden Commit (Dateien und Commit-Nachricht), der solche Daten enthält.
+- Testdaten verwenden neutrale Namen wie „Testkind“. Commits laufen über die GitHub-noreply-Adresse.
 
 ## Lizenzen
 
