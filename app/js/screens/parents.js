@@ -27,7 +27,7 @@ function row(label, control, extra) {
  * @returns {import('./base.js').Screen}
  */
 export function createParentsScreen(ctx) {
-  const { section, body } = makeScreen('parents', { title: TEXT.parents });
+  const { section, body } = makeScreen('parents', { title: TEXT.parents, back: () => ctx.show('start') });
   const name = /** @type {HTMLInputElement} */ (el('input', { id: 'input-name', attrs: { type: 'text', maxlength: MAX_NAME_LENGTH, autocomplete: 'off' } }));
   const total = /** @type {HTMLInputElement} */ (el('input', { id: 'input-total', attrs: {
     type: 'range', min: TIMER.minTotalSec, max: TIMER.maxTotalSec, step: TIMER.stepSec } }));
