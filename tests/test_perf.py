@@ -34,7 +34,7 @@ def test_frame_time_under_budget(chromium_page, base_url, screen):
     cdp = page.context.new_cdp_session(page)
     cdp.send("Emulation.setCPUThrottlingRate", {"rate": config.CPU_THROTTLE_RATE})
     if screen == "brush":
-        page.click("#btn-start")
+        page.click("#btn-start", force=True)  # breathing animation never "stable"
         page.wait_for_selector("#screen-brush.active", timeout=10000)
     else:
         page.click("#btn-dress")

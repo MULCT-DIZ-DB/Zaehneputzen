@@ -1,0 +1,171 @@
+// @ts-check
+/**
+ * Dress-up screen: choose outfit pieces and stroke the flip sequins.
+ * @module screens/dress
+ */
+import { TEXT, OUTFITS, OUTFIT_SLOTS, SEQUINS } from '../config.js';
+import { el, clear } from '../dom.js';
+import { drawDancer, drawOutfitPreview, SEQUIN_POINTS } from '../dancer.js';
+import { createIndex, strokeFlips, encodeStates, flipAll } from '../sequins.js';
+import { makeScreen, textButton } from './base.js';
+import { sequinStatesOf } from './start.js';
+
+/** Grid lookup indices per sequin outfit (built once). */
+const INDICES = Object.fromEntries(Object.entries(SEQUIN_POINTS)
+  .map(([id, pts]) => [id, createIndex(pts, SEQUINS.touchRadius)]));
+
+/**
+ * Converts a pointer position to SVG user coordinates.
+ * @param {SVGSVGElement} root SVG root.
+ * @param {PointerEvent} e Pointer event.
+ * @param {DOMMatrix} inverse Cached inverse screen matrix.
+ * @returns {{x: number, y: number}}
+ */
+function toSvg(root, e, inverse) {
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(inverse);
+  return { x: p.x, y: p.y };
+}
+
+/**
+ * Creates the dress-up screen.
+ * @param {import('./base.js').AppContext} ctx App context.
+ * @returns {import('./base.js').Screen}
+ */
+export function createDressScreen(ctx) {
+  const { section, body } = makeScreen('dress', { title: TEXT.dressUp, back: () => ctx.show('start') });
+  const stage = el('div', { cls: 'dress-stage' });
+  const wardrobe = el('div', { cls: 'wardrobe' });
+  const flipHint = el('p', { cls: 'flip-hint', text: TEXT.flipHint });
+  const flipBtn = textButton(TEXT.flipAll, () => flipEverything(), 'btn-small', 'btn-flip-all');
+  body.append(el('div', { cls: 'dress-layout' }, [el('div', { cls: 'dress-left' }, [stage, flipHint, flipBtn]), wardrobe]));
+
+  /** @type {Object<string, boolean[]>} */ let states = {};
+  let animating = 0;
+
+  /** @returns {string[]} Worn sequin outfit ids. */
+  const wornSequins = () => ctx.getState().wearing.filter((id) => SEQUIN_POINTS[id]);
+
+  /** Saves sequin states. @returns {void} */
+  function saveSequins() {
+    const state = ctx.getState();
+    const sequins = { ...state.sequins };
+    Object.entries(states).forEach(([id, s]) => { sequins[id] = encodeStates(s); });
+    ctx.setState({ ...state, sequins });
+  }
+
+  /**
+   * Changes one sequin colour, animated if not too many flips run already.
+   * @param {SVGElement} node Sequin circle.
+   * @param {string} color New colour.
+   * @returns {void}
+   */
+  function flipNode(node, color) {
+    if (animating >= SEQUINS.maxConcurrentFlips) {
+      node.setAttribute('fill', color);
+      return;
+    }
+    animating += 1;
+    node.classList.add('flip');
+    window.setTimeout(() => node.setAttribute('fill', color), SEQUINS.flipMs / 2);
+    window.setTimeout(() => { node.classList.remove('flip'); animating -= 1; }, SEQUINS.flipMs);
+  }
+
+  /**
+   * Applies flips for one outfit.
+   * @param {string} id Outfit id.
+   * @param {{i: number, value: boolean}[]} changes Changes.
+   * @returns {void}
+   */
+  function applyFlips(id, changes) {
+    const item = OUTFITS.find((o) => o.id === id);
+    const patch = stage.querySelector(`.sequin-patch[data-outfit="${id}"]`);
+    if (!item || !patch) return;
+    const nodes = patch.querySelectorAll('.sq');
+    changes.forEach(({ i, value }) => {
+      states[id][i] = value;
+      flipNode(/** @type {SVGElement} */ (nodes[i]), value ? item.sequinBack : item.sequinFront);
+    });
+  }
+
+  /** "Alle umdrehen" button. @returns {void} */
+  function flipEverything() {
+    wornSequins().forEach((id) => {
+      const next = flipAll(states[id]);
+      applyFlips(id, next.map((value, i) => ({ i, value })));
+    });
+    saveSequins();
+  }
+
+  /** Pointer handling for stroking sequins. @returns {void} */
+  function bindStroke(/** @type {SVGSVGElement} */ root) {
+    /** @type {DOMMatrix|null} */ let inverse = null;
+    /** @type {{x: number, y: number}|null} */ let last = null;
+    root.addEventListener('pointerdown', (e) => {
+      const m = root.getScreenCTM();
+      inverse = m ? m.inverse() : null;
+      last = inverse ? toSvg(root, e, inverse) : null;
+    });
+    root.addEventListener('pointermove', (e) => {
+      if (!last || !inverse) return;
+      const p = toSvg(root, e, inverse);
+      wornSequins().forEach((id) => applyFlips(id, strokeFlips(INDICES[id], states[id], last, p, SEQUINS.touchRadius)));
+      last = p;
+    });
+    const end = () => { if (last) saveSequins(); last = null; };
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => root.addEventListener(ev, end));
+  }
+
+  /** Redraws dancer and wardrobe. @returns {void} */
+  function render() {
+    const state = ctx.getState();
+    states = sequinStatesOf(state);
+    clear(stage);
+    const dancer = /** @type {SVGSVGElement} */ (drawDancer({ wearing: state.wearing, sequinStates: states, cls: 'dress-dancer' }));
+    stage.append(dancer);
+    bindStroke(dancer);
+    const hasSequins = wornSequins().length > 0;
+    flipHint.hidden = !hasSequins;
+    flipBtn.hidden = !hasSequins;
+    renderWardrobe(state);
+  }
+
+  /**
+   * Wardrobe: one row per slot with the owned pieces.
+   * @param {import('../storage.js').State} state State.
+   * @returns {void}
+   */
+  function renderWardrobe(state) {
+    clear(wardrobe);
+    if (state.outfits.length === 0) {
+      wardrobe.append(el('p', { cls: 'empty', text: TEXT.nothingToWear }));
+      return;
+    }
+    OUTFIT_SLOTS.forEach((slot) => {
+      const items = OUTFITS.filter((o) => o.slot === slot && state.outfits.includes(o.id));
+      if (items.length === 0) return;
+      wardrobe.append(el('div', { cls: 'wardrobe-row' }, items.map((o) => {
+        const worn = state.wearing.includes(o.id);
+        return el('button', { cls: `btn wardrobe-item${worn ? ' worn' : ''}${o.sequin || o.glitter ? ' glitter' : ''}`,
+          attrs: { type: 'button', 'aria-label': o.name, 'data-outfit': o.id },
+          on: { click: () => toggle(o.id) } }, [drawOutfitPreview(o.id, states[o.id]), el('span', { text: o.name })]);
+      })));
+    });
+  }
+
+  /**
+   * Puts an item on (replacing the slot) or takes it off.
+   * @param {string} id Outfit id.
+   * @returns {void}
+   */
+  function toggle(id) {
+    const state = ctx.getState();
+    const item = OUTFITS.find((o) => o.id === id);
+    if (!item) return;
+    const others = state.wearing.filter((w) => OUTFITS.find((o) => o.id === w)?.slot !== item.slot);
+    const wearing = state.wearing.includes(id) ? others : [...others, id];
+    ctx.setState({ ...state, wearing });
+    render();
+  }
+
+  return { name: 'dress', el: section, enter: render };
+}

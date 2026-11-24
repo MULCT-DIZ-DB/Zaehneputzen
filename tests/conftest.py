@@ -46,6 +46,7 @@ def browser_context_args(browser_context_args: dict[str, Any]) -> dict[str, Any]
         "has_touch": True,
         "locale": "de-DE",
         "timezone_id": "Europe/Berlin",
+        "reduced_motion": "reduce",
     }
 
 

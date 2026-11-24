@@ -1,0 +1,86 @@
+// @ts-check
+/**
+ * Start screen: greeting, swaying dancer, start button, menu, hidden parent button.
+ * @module screens/start
+ */
+import { TEXT, UI } from '../config.js';
+import { el, clear } from '../dom.js';
+import { drawDancer } from '../dancer.js';
+import { computeStreak } from '../rewards.js';
+import { decodeStates } from '../sequins.js';
+import { SEQUIN_POINTS } from '../dancer.js';
+import { makeScreen, iconButton, textButton } from './base.js';
+
+/** @typedef {import('./base.js').AppContext} AppContext */
+
+/**
+ * Sequin states of all sequin outfits, decoded from the saved state.
+ * @param {import('../storage.js').State} state State.
+ * @returns {Object<string, boolean[]>}
+ */
+export function sequinStatesOf(state) {
+  return Object.fromEntries(Object.entries(SEQUIN_POINTS)
+    .map(([id, pts]) => [id, decodeStates(state.sequins[id] || '', pts.length)]));
+}
+
+/**
+ * Attaches a long-press handler (hold for `ms`).
+ * @param {HTMLElement} node Target element.
+ * @param {number} ms Hold duration.
+ * @param {() => void} onHold Called after holding long enough.
+ * @returns {void}
+ */
+export function onLongPress(node, ms, onHold) {
+  let timer = 0;
+  const cancel = () => {
+    window.clearTimeout(timer);
+    node.classList.remove('holding');
+  };
+  node.addEventListener('pointerdown', () => {
+    cancel();
+    node.classList.add('holding');
+    timer = window.setTimeout(() => { cancel(); onHold(); }, ms);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => node.addEventListener(ev, cancel));
+}
+
+/**
+ * Creates the start screen.
+ * @param {AppContext} ctx App context.
+ * @returns {import('./base.js').Screen}
+ */
+export function createStartScreen(ctx) {
+  const { section, body } = makeScreen('start');
+  const greeting = el('h1', { id: 'greeting', cls: 'greeting' });
+  const streak = el('p', { cls: 'streak-badge' });
+  const stage = el('div', { cls: 'stage' });
+  const parents = iconButton('eltern', TEXT.parentsHint, () => {}, 'btn-parents', { id: 'btn-parents' });
+  onLongPress(parents, UI.parentHoldMs, () => ctx.show('parents'));
+  const startBtn = textButton(TEXT.start, () => {
+    ctx.music.unlock();
+    ctx.keeper.enable();
+    ctx.show('countdown');
+  }, 'btn-big btn-start', 'btn-start');
+  const menu = el('nav', { cls: 'menu' }, [
+    iconButton('album', TEXT.album, () => ctx.show('album'), '', { id: 'btn-album', showLabel: true }),
+    iconButton('kleid', TEXT.dressUp, () => ctx.show('dress'), '', { id: 'btn-dress', showLabel: true }),
+    iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
+  ]);
+  body.append(parents, el('div', { cls: 'start-layout' }, [
+    stage,
+    el('div', { cls: 'start-panel' }, [greeting, el('p', { cls: 'subtitle', text: TEXT.ready }), streak, startBtn, menu]),
+  ]));
+
+  return {
+    name: 'start',
+    el: section,
+    enter() {
+      const state = ctx.getState();
+      greeting.textContent = state.name ? `${TEXT.greeting} ${state.name}!` : `${TEXT.greeting}!`;
+      const days = computeStreak(state.calendar, new Date());
+      streak.textContent = days > 0 ? `★ ${days} ${TEXT.streak}` : '';
+      clear(stage);
+      stage.append(drawDancer({ wearing: state.wearing, sequinStates: sequinStatesOf(state), cls: 'move-wiegen' }));
+    },
+  };
+}
