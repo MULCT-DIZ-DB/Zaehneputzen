@@ -16,7 +16,6 @@ export const TIMER = Object.freeze({
   minTotalSec: 60,
   maxTotalSec: 150,
   stepSec: 15,
-  zoneCount: 4,
   fastTotalSec: 20,
   countdownSec: 3,
   fastCountdownSec: 1,
@@ -26,19 +25,26 @@ export const TIMER = Object.freeze({
   switchHintMs: 2500,
 });
 
-/** Mouth zones (index order is the drawing order, not the brushing order). */
-export const ZONES = Object.freeze([
-  { id: 'ol', label: 'oben links' },
-  { id: 'or', label: 'oben rechts' },
-  { id: 'ul', label: 'unten links' },
-  { id: 'ur', label: 'unten rechts' },
-]);
+/** Tooth surfaces of the KAI method with the brushing motion shown in the animation. */
+export const SURFACES = Object.freeze({
+  kau: { name: 'Kauflächen', how: 'hin und her schrubben', motion: 'motion-kau' },
+  aussen: { name: 'Außenflächen', how: 'kleine Kreise', motion: 'motion-aussen' },
+  innen: { name: 'Innenflächen', how: 'von Rot nach Weiß wischen', motion: 'motion-innen' },
+});
 
-/** Selectable brushing orders (indices into ZONES). */
-export const ZONE_ORDERS = Object.freeze([
-  { id: 'standard', label: 'oben links → oben rechts → unten links → unten rechts', order: [0, 1, 2, 3] },
-  { id: 'kreis', label: 'im Kreis: oben links → oben rechts → unten rechts → unten links', order: [0, 1, 3, 2] },
-  { id: 'rechts', label: 'oben rechts → oben links → unten links → unten rechts', order: [1, 0, 2, 3] },
+/** Jaw names; „beide“ = lower first, upper in the second half of the step. */
+export const JAWS = Object.freeze({ unten: 'unten', oben: 'oben', beide: 'unten und oben' });
+
+/** Brushing plans after KAI (Kauflächen, Außenflächen, Innenflächen). */
+export const BRUSH_PLANS = Object.freeze([
+  { id: 'kai6', label: 'KAI in 6 Schritten (jede Fläche erst unten, dann oben)', steps: [
+    { surface: 'kau', jaw: 'unten' }, { surface: 'kau', jaw: 'oben' },
+    { surface: 'aussen', jaw: 'unten' }, { surface: 'aussen', jaw: 'oben' },
+    { surface: 'innen', jaw: 'unten' }, { surface: 'innen', jaw: 'oben' },
+  ] },
+  { id: 'kai3', label: 'KAI in 3 Schritten (unten und oben zusammen)', steps: [
+    { surface: 'kau', jaw: 'beide' }, { surface: 'aussen', jaw: 'beide' }, { surface: 'innen', jaw: 'beide' },
+  ] },
 ]);
 
 /** Gift rules. */
@@ -165,7 +171,9 @@ export const GAMES = Object.freeze({
 /** Default parent settings. */
 export const DEFAULT_SETTINGS = Object.freeze({
   totalSec: TIMER.defaultTotalSec,
-  zoneOrder: 'standard',
+  brushPlan: 'kai6',
+  /** Piano game tempo: 'langsam' | 'mittel' | 'normal'. */
+  pianoTempo: 'langsam',
   music: true,
   volume: 0.6,
   /** Minutes of game time after each completed brushing (0 = games off). */
@@ -209,6 +217,12 @@ export const PIANO = Object.freeze({
   toneSec: 1.2,
   /** Notes keep falling this far past the hit line (share of the travel) before they disappear. */
   overshoot: 1.25,
+  /** Tempo levels: langsam = each song's slow practice tempo; the others are a share of the real tempo. */
+  tempos: [
+    { id: 'langsam', name: 'Langsam', factor: null },
+    { id: 'mittel', name: 'Mittel', factor: 0.85 },
+    { id: 'normal', name: 'Normal', factor: 1 },
+  ],
 });
 
 /** Mini game „Zuckerjagd“ (tap sugar bugs off the teeth). */
@@ -240,18 +254,20 @@ export const MUSIC = Object.freeze({
   padGain: 0.05,
   bassGain: 0.09,
   chimeGain: 0.25,
-  /** Piano voice: peak level, attack, quiet octave overtone, fade on re-strike, tail after the tone. */
-  pianoGain: 0.22,
+  /**
+   * Piano voice, pre-rendered once per note into a buffer (cheap to play, no clicks):
+   * peak level, attack, quiet octave overtone, final fade-out, re-strike fade.
+   * Gain staging: maxVoices × pianoPeak × (1 + pianoOctaveGain) × masterGain stays below 1, so it never clips.
+   */
+  pianoPeak: 0.35,
   pianoAttackSec: 0.012,
   pianoOctaveGain: 0.18,
-  voiceFadeSec: 0.015,
+  pianoEndFadeSec: 0.04,
   pianoTailSec: 0.3,
+  voiceFadeSec: 0.015,
+  /** At most this many piano tones sound at once; the oldest fades out quickly. */
+  maxVoices: 6,
   toneStartDelaySec: 0.005,
-  /** Limiter at the end of the chain: no clipping however many tones overlap. */
-  limiterThresholdDb: -6,
-  limiterRatio: 20,
-  limiterAttackSec: 0.002,
-  limiterReleaseSec: 0.15,
   lowpassHz: 2400,
   /** Chord roots (MIDI) for a 4-bar loop: C – Am – F – G. */
   chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],
@@ -332,7 +348,9 @@ export const TEXT = Object.freeze({
   go: 'Los!',
   done: 'Super geputzt!',
   parents: 'Eltern',
-  parentsHint: 'Für Eltern: 3 Sekunden gedrückt halten',
+  parentsHint: 'Eltern-Bereich',
+  gateTitle: 'Für Eltern: Bitte löse die Aufgabe.',
+  gateCancel: 'Abbrechen',
   flipAll: 'Alle umdrehen',
   flipHint: 'Streich über die Pailletten!',
   resetSequins: 'Alle zurück',
@@ -350,7 +368,10 @@ export const TEXT = Object.freeze({
   nameLabel: 'Name des Kindes',
   totalLabel: 'Putzzeit',
   seconds: 'Sekunden',
-  orderLabel: 'Reihenfolge',
+  orderLabel: 'Putz-Reihenfolge',
+  toothOuter: 'außen',
+  toothInner: 'innen',
+  pianoTempoLabel: 'Tempo:',
   musicLabel: 'Musik',
   volumeLabel: 'Lautstärke',
   reset: 'Fortschritt löschen',

@@ -10,12 +10,24 @@ import { PIANO } from '../config.js';
 const MS_PER_MINUTE = 60000;
 
 /**
+ * Tempo of a song at a tempo level: 'langsam' = practice tempo, otherwise a share of the real tempo.
+ * @param {import('../songs.js').Song} song Song.
+ * @param {string} tempoId Tempo level id (unknown ids fall back to the practice tempo).
+ * @returns {number} Beats per minute.
+ */
+export function bpmFor(song, tempoId) {
+  const level = PIANO.tempos.find((t) => t.id === tempoId);
+  return level && level.factor ? song.originalBpm * level.factor : song.bpm;
+}
+
+/**
  * Converts a song into timed notes. The first note reaches the hit line after the lead-in.
  * @param {import('../songs.js').Song} song Song.
+ * @param {string} [tempoId] Tempo level (default: slow practice tempo).
  * @returns {ChartNote[]}
  */
-export function buildChart(song) {
-  const beatMs = MS_PER_MINUTE / song.bpm;
+export function buildChart(song, tempoId = PIANO.tempos[0].id) {
+  const beatMs = MS_PER_MINUTE / bpmFor(song, tempoId);
   const chart = [];
   let t = PIANO.leadInMs;
   song.notes.forEach(([midi, beats]) => {

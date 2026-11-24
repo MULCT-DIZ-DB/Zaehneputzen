@@ -34,16 +34,37 @@ export function createPianoGameScreen(ctx) {
     textButton(TEXT.pianoAgain, () => song && startSong(song), 'btn-big', 'btn-piano-again'),
     textButton(TEXT.pianoOther, () => showMenu(), 'btn-big', 'btn-piano-other'),
   ])]);
+  const tempoButtons = PIANO.tempos.map((t) => textButton(t.name, () => setTempo(t.id), 'btn-small tempo-btn'));
+  tempoButtons.forEach((b, i) => b.setAttribute('data-tempo', PIANO.tempos[i].id));
   const menu = el('div', { cls: 'piano-menu' }, [
     el('p', { cls: 'game-status', text: TEXT.pianoPick }),
+    el('div', { cls: 'tempo-row' }, [el('span', { cls: 'tempo-label', text: TEXT.pianoTempoLabel }), ...tempoButtons]),
     el('div', { cls: 'song-list' }, [
       ...SONGS.map((s) => textButton(s.name, () => startSong(s), 'song-btn')),
       textButton(TEXT.pianoFree, () => startFree(), 'song-btn btn-free', 'btn-piano-free'),
     ]),
   ]);
   menu.querySelectorAll('.song-btn:not(.btn-free)').forEach((b, i) => b.setAttribute('data-song', SONGS[i].id));
-  const play = el('div', { cls: 'piano-play' }, [hitsText, lanes, el('div', { cls: 'piano-keys' }, keys), result]);
+  const keyboard = el('div', { cls: 'piano-keys' }, keys);
+  const play = el('div', { cls: 'piano-play' }, [hitsText, lanes, keyboard, result]);
   kit.body.append(menu, play);
+
+  /**
+   * Selects a tempo level and remembers it.
+   * @param {string} id Tempo id.
+   * @returns {void}
+   */
+  function setTempo(id) {
+    const state = ctx.getState();
+    if (state.settings.pianoTempo !== id) ctx.setState({ ...state, settings: { ...state.settings, pianoTempo: id } });
+    showTempo();
+  }
+
+  /** Marks the selected tempo button. @returns {void} */
+  function showTempo() {
+    const current = ctx.getState().settings.pianoTempo;
+    tempoButtons.forEach((b) => b.classList.toggle('selected', b.dataset.tempo === current));
+  }
 
   /** @type {import('../songs.js').Song|null} */ let song = null;
   /** @type {import('../games/piano.js').ChartNote[]} */ let chart = [];
@@ -77,12 +98,14 @@ export function createPianoGameScreen(ctx) {
   function showMenu() {
     stopSong();
     setMode('menu');
+    showTempo();
     if (!playOpen(ctx)) kit.showTimeUp();
   }
 
   /** Free play: just the keys. @returns {void} */
   function startFree() {
     stopSong();
+    kit.section.dataset.presses = '0';
     setMode('free');
   }
 
@@ -118,7 +141,8 @@ export function createPianoGameScreen(ctx) {
   function startSong(s) {
     stopSong();
     song = s;
-    chart = buildChart(s);
+    chart = buildChart(s, ctx.getState().settings.pianoTempo);
+    kit.section.dataset.presses = '0';
     hits = new Set();
     setMode('song');
     hitsText.textContent = `0 / ${chart.length} ${TEXT.pianoHits}`;
@@ -147,6 +171,7 @@ export function createPianoGameScreen(ctx) {
     const midi = PIANO.keys[lane];
     ctx.music.tone(midi, PIANO.toneSec);
     kit.section.dataset.last = String(midi);
+    kit.section.dataset.presses = String(Number(kit.section.dataset.presses || 0) + 1);
     replayClass(keys[lane], 'pressed');
     replayClass(lanes.children[lane], 'touched');
     if (mode !== 'song') return;
@@ -159,7 +184,40 @@ export function createPianoGameScreen(ctx) {
     replayClass(lanes.children[lane], 'sparkle-lane');
   }
 
-  keys.forEach((k, lane) => k.addEventListener('pointerdown', (e) => { e.preventDefault(); press(lane); }));
+  /** Key currently under each finger (several fingers can play and slide at once). */
+  const fingers = new Map();
+  /** @type {DOMRect|null} */ let keyboardRect = null;
+
+  /**
+   * Key under a pointer position (keys are equally wide), or -1 outside the keyboard.
+   * @param {PointerEvent} e Pointer event.
+   * @returns {number}
+   */
+  function laneAt(e) {
+    const r = keyboardRect || keyboard.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY > r.bottom) return -1;
+    return Math.min(keys.length - 1, Math.floor(((e.clientX - r.left) / r.width) * keys.length));
+  }
+
+  keyboard.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    keyboardRect = keyboard.getBoundingClientRect();
+    try { keyboard.setPointerCapture(e.pointerId); } catch { /* sliding still works inside the keyboard */ }
+    const lane = laneAt(e);
+    fingers.set(e.pointerId, lane);
+    if (lane >= 0) press(lane);
+  });
+  // Sliding: a finger moving onto another key plays that key once.
+  keyboard.addEventListener('pointermove', (e) => {
+    if (!fingers.has(e.pointerId)) return;
+    const lane = laneAt(e);
+    if (lane === fingers.get(e.pointerId)) return;
+    fingers.set(e.pointerId, lane);
+    if (lane >= 0) press(lane);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => keyboard.addEventListener(ev, (e) => {
+    fingers.delete(/** @type {PointerEvent} */ (e).pointerId);
+  }));
 
   return {
     name: 'game-piano',

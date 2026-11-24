@@ -18,7 +18,8 @@ const C2 = 72;
  * @typedef {Object} Song
  * @property {string} id
  * @property {string} name German title.
- * @property {number} bpm Slow tempo for small fingers.
+ * @property {number} bpm Slow practice tempo for small fingers (level 'langsam').
+ * @property {number} originalBpm Usual tempo of the song (level 'normal'); a typical value - folk songs have no fixed tempo.
  * @property {[number, number][]} notes Melody as [MIDI note, length in beats].
  */
 
@@ -28,6 +29,7 @@ export const SONGS = Object.freeze([
     id: 'entchen',
     name: 'Alle meine Entchen',
     bpm: 70,
+    originalBpm: 110,
     notes: [
       [C, 1], [D, 1], [E, 1], [F, 1], [G, 2], [G, 2],
       [A, 1], [A, 1], [A, 1], [A, 1], [G, 4],
@@ -40,6 +42,7 @@ export const SONGS = Object.freeze([
     id: 'freude',
     name: 'Ode an die Freude',
     bpm: 66,
+    originalBpm: 110,
     notes: [
       [E, 1], [E, 1], [F, 1], [G, 1], [G, 1], [F, 1], [E, 1], [D, 1],
       [C, 1], [C, 1], [D, 1], [E, 1], [E, 1.5], [D, 0.5], [D, 2],
@@ -51,6 +54,7 @@ export const SONGS = Object.freeze([
     id: 'weihnachtsmann',
     name: 'Morgen kommt der Weihnachtsmann',
     bpm: 72,
+    originalBpm: 100,
     notes: [
       [C, 1], [C, 1], [G, 1], [G, 1], [A, 1], [A, 1], [G, 2],
       [F, 1], [F, 1], [E, 1], [E, 1], [D, 1], [D, 1], [C, 2],
@@ -64,6 +68,7 @@ export const SONGS = Object.freeze([
     id: 'haenschen',
     name: 'Hänschen klein',
     bpm: 76,
+    originalBpm: 120,
     notes: [
       [G, 1], [E, 1], [E, 2], [F, 1], [D, 1], [D, 2], [C, 1], [D, 1], [E, 1], [F, 1], [G, 1], [G, 1], [G, 2],
       [G, 1], [E, 1], [E, 2], [F, 1], [D, 1], [D, 2], [C, 1], [E, 1], [G, 1], [G, 1], [C, 4],
@@ -75,7 +80,9 @@ export const SONGS = Object.freeze([
   {
     id: 'wiegenlied',
     name: 'Wiegenlied (Brahms)',
+    // Beats here count eighth notes: 132 eighths/min = a calm lullaby at 66 quarters/min.
     bpm: 80,
+    originalBpm: 132,
     notes: [
       [E, 1], [E, 1], [G, 3], [E, 1], [E, 1], [G, 3],
       [E, 1], [G, 1], [C2, 2], [H, 2], [A, 2], [A, 2], [G, 2],

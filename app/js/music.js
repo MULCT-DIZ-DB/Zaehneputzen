@@ -39,8 +39,10 @@ export function buildSong() {
 export class Music {
   constructor() {
     /** @type {BaseAudioContext|null} */ this.ctx = null;
-    /** @type {Map<number, {oscs: OscillatorNode[], env: GainNode}>} one sounding piano voice per key */
-    this.voices = new Map();
+    /** @type {{midi: number, src: AudioBufferSourceNode, gain: GainNode, end: number, stolen: boolean}[]} sounding piano voices */
+    this.live = [];
+    /** @type {Map<string, AudioBuffer>} pre-rendered piano tones */
+    this.toneBuffers = new Map();
     /** @type {GainNode|null} */ this.master = null;
     /** @type {BiquadFilterNode|null} */ this.filter = null;
     this.enabled = true;
@@ -76,28 +78,21 @@ export class Music {
   }
 
   /**
-   * Builds the output chain on a context: soft low-pass → volume → limiter → speakers.
-   * The limiter keeps many overlapping tones from clipping (crackling).
-   * Also used with an OfflineAudioContext in the tests.
+   * Builds the output chain on a context: background music → soft low-pass → volume → speakers;
+   * piano tones go straight to the volume stage. Also used with an OfflineAudioContext in the tests.
    * @param {BaseAudioContext} context Audio context.
    * @returns {void}
    */
   attach(context) {
     this.ctx = context;
-    this.voices = new Map();
+    this.live = [];
+    this.toneBuffers = new Map();
     this.filter = context.createBiquadFilter();
     this.filter.type = 'lowpass';
     this.filter.frequency.value = MUSIC.lowpassHz;
     this.master = context.createGain();
-    const limiter = context.createDynamicsCompressor();
-    limiter.threshold.value = MUSIC.limiterThresholdDb;
-    limiter.knee.value = 0;
-    limiter.ratio.value = MUSIC.limiterRatio;
-    limiter.attack.value = MUSIC.limiterAttackSec;
-    limiter.release.value = MUSIC.limiterReleaseSec;
     this.filter.connect(this.master);
-    this.master.connect(limiter);
-    limiter.connect(context.destination);
+    this.master.connect(context.destination);
     this.applyVolume();
   }
   /**
@@ -221,42 +216,88 @@ export class Music {
   }
 
   /**
-   * Schedules a soft piano tone: sine plus a quiet octave, short attack, natural decay.
-   * A key that is still sounding is faded out quickly first (one voice per key),
-   * so fast repeated taps never pile up or click.
+   * Computes a piano tone once: sine plus a quiet octave, short attack, natural decay
+   * and a smooth fade to exactly zero (no click at the end). Cached per note and length.
+   * @param {number} midi MIDI note.
+   * @param {number} durSec Tone length in seconds.
+   * @returns {AudioBuffer}
+   */
+  toneBuffer(midi, durSec) {
+    const key = `${midi}:${durSec}`;
+    const cached = this.toneBuffers.get(key);
+    if (cached) return cached;
+    const ctx = /** @type {BaseAudioContext} */ (this.ctx);
+    const rate = ctx.sampleRate;
+    const n = Math.ceil((durSec + MUSIC.pianoTailSec) * rate);
+    const buffer = ctx.createBuffer(1, n, rate);
+    const data = buffer.getChannelData(0);
+    const w = (2 * Math.PI * midiToHz(midi)) / rate;
+    const attack = MUSIC.pianoAttackSec * rate;
+    const tau = (durSec / 4) * rate;
+    const fade = MUSIC.pianoEndFadeSec * rate;
+    for (let i = 0; i < n; i += 1) {
+      let env = i < attack ? i / attack : Math.exp(-(i - attack) / tau);
+      if (i > n - fade) env *= (n - i) / fade;
+      data[i] = MUSIC.pianoPeak * env * (Math.sin(w * i) + MUSIC.pianoOctaveGain * Math.sin(2 * w * i));
+    }
+    this.toneBuffers.set(key, buffer);
+    return buffer;
+  }
+
+  /**
+   * Fades a sounding voice out quickly (re-strike or voice limit).
+   * @param {{src: AudioBufferSourceNode, gain: GainNode, end: number, stolen: boolean}} voice Voice.
+   * @param {number} when Context time.
+   * @returns {void}
+   */
+  fadeVoice(voice, when) {
+    voice.stolen = true;
+    voice.gain.gain.setTargetAtTime(0, when, MUSIC.voiceFadeSec);
+    voice.end = Math.min(voice.end, when + MUSIC.voiceFadeSec * 4);
+    voice.src.stop(voice.end);
+  }
+
+  /**
+   * Schedules a piano tone. One voice per key (a re-struck key fades its old tone) and at
+   * most `MUSIC.maxVoices` at once (the oldest fades) – cheap for the iPad and never clipping.
    * @param {number} midi MIDI note.
    * @param {number} when Start time (context seconds).
    * @param {number} durSec Length in seconds.
    * @returns {void}
    */
   toneAt(midi, when, durSec) {
-    if (!this.ctx || !this.filter) return;
-    const old = this.voices.get(midi);
-    if (old) {
-      old.env.gain.setTargetAtTime(0, when, MUSIC.voiceFadeSec);
-      old.oscs.forEach((o) => o.stop(when + MUSIC.voiceFadeSec * 8));
-    }
-    const env = this.ctx.createGain();
-    env.gain.setValueAtTime(0, when);
-    env.gain.linearRampToValueAtTime(MUSIC.pianoGain, when + MUSIC.pianoAttackSec);
-    env.gain.setTargetAtTime(0, when + MUSIC.pianoAttackSec, durSec / 4);
-    const base = this.ctx.createOscillator();
-    base.type = 'sine';
-    base.frequency.value = midiToHz(midi);
-    const octave = this.ctx.createOscillator();
-    octave.type = 'sine';
-    octave.frequency.value = midiToHz(midi + 12);
-    const octaveGain = this.ctx.createGain();
-    octaveGain.gain.value = MUSIC.pianoOctaveGain;
-    base.connect(env);
-    octave.connect(octaveGain);
-    octaveGain.connect(env);
-    env.connect(this.filter);
-    const voice = { oscs: [base, octave], env };
-    this.voices.set(midi, voice);
-    const end = when + durSec + MUSIC.pianoTailSec;
-    voice.oscs.forEach((o) => { o.start(when); o.stop(end); });
-    base.onended = () => { if (this.voices.get(midi) === voice) this.voices.delete(midi); };
+    if (!this.ctx || !this.master) return;
+    this.live = this.live.filter((v) => v.end > when);
+    this.live.filter((v) => v.midi === midi && !v.stolen).forEach((v) => this.fadeVoice(v, when));
+    const sounding = this.live.filter((v) => !v.stolen);
+    while (sounding.length >= MUSIC.maxVoices) this.fadeVoice(/** @type {any} */ (sounding.shift()), when);
+    const buffer = this.toneBuffer(midi, durSec);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const gain = this.ctx.createGain();
+    src.connect(gain);
+    gain.connect(this.master);
+    src.start(when);
+    const voice = { midi, src, gain, end: when + buffer.duration, stolen: false };
+    src.onended = () => { this.live = this.live.filter((v) => v !== voice); };
+    this.live.push(voice);
+  }
+
+  /**
+   * Number of piano tones currently sounding (not counting ones that are fading out).
+   * @returns {number}
+   */
+  activeVoices() {
+    return this.live.filter((v) => !v.stolen).length;
+  }
+
+  /**
+   * Number of sounding (not fading) voices of one key.
+   * @param {number} midi MIDI note.
+   * @returns {number}
+   */
+  voicesFor(midi) {
+    return this.live.filter((v) => v.midi === midi && !v.stolen).length;
   }
   /** Little fanfare at the end. @returns {void} */
   fanfare() {

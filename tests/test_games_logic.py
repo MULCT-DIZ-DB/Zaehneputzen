@@ -57,6 +57,7 @@ def test_songs_only_use_the_keys(js):
     assert len({s["id"] for s in songs}) == 5
     for s in songs:
         assert s["name"] and 40 <= s["bpm"] <= 90, s["id"]
+        assert 90 <= s["originalBpm"] <= 140 and s["bpm"] < s["originalBpm"] * 0.75, s["id"]
         assert len(s["notes"]) >= 12, s["id"]
         for midi, beats in s["notes"]:
             assert midi in keys and beats > 0, (s["id"], midi)
@@ -76,6 +77,23 @@ def test_chart_timing_from_bpm(js):
     res = js("return m.piano.buildChart({ id: 't', name: 't', bpm: 60, notes: [[60, 1], [64, 2], [67, 1]] });")
     lead = js("return m.config.PIANO.leadInMs;")
     assert [(n["lane"], n["timeMs"], n["midi"]) for n in res] == [(0, lead, 60), (2, lead + 1000, 64), (4, lead + 3000, 67)]
+
+
+def test_tempo_levels(js):
+    """langsam = practice tempo, mittel = 75–90 % of the real tempo, normal = real tempo."""
+    res = js("""
+        const P = m.config.PIANO;
+        const s = m.songs.SONGS.find(x => x.id === 'entchen');
+        const bpm = P.tempos.map(t => m.piano.bpmFor(s, t.id));
+        const second = P.tempos.map(t => m.piano.buildChart(s, t.id)[1].timeMs - P.leadInMs);
+        return [P.tempos.map(t => t.id), bpm, second, s.bpm, s.originalBpm, m.piano.bpmFor(s, 'quatsch')];
+    """)
+    ids, bpm, second, slow, original, unknown = res
+    assert ids == ["langsam", "mittel", "normal"]
+    assert bpm[0] == slow and bpm[2] == original
+    assert 0.75 * original <= bpm[1] <= 0.9 * original
+    assert second == [round(60000 / b) for b in bpm]
+    assert unknown == slow, "unknown tempo falls back to slow"
 
 
 def test_hit_window_edges(js):

@@ -178,6 +178,42 @@ def test_piano_notes_follow_the_clock(app_page):
     assert abs(info[0] - (travel - 1000)) < 150, info
 
 
+def test_piano_tempo_choice(app_page):
+    page = app_page
+    open_hub(page)
+    page.click("#btn-game-piano")
+    assert page.get_attribute(".tempo-btn.selected", "data-tempo") == "langsam"
+    page.click(".tempo-btn[data-tempo='normal']")
+    assert page.get_attribute(".tempo-btn.selected", "data-tempo") == "normal"
+    saved = page.evaluate("JSON.parse(localStorage.getItem('zahnputz-tanz')).settings.pianoTempo")
+    assert saved == "normal"
+    page.click(".song-btn[data-song='entchen']")
+    chart = page.evaluate("import('./js/songs.js').then(s => import('./js/games/piano.js').then(p =>"
+                          " p.buildChart(s.SONGS.find(x => x.id === 'entchen'), 'normal')))")
+    page.clock.run_for(chart[1]["timeMs"])
+    page.click(f".piano-key[data-lane='{chart[1]['lane']}']")
+    assert page.inner_text("#piano-hits").strip().startswith("1"), "second note hit at the normal-tempo time"
+
+
+def test_piano_slide_over_keys(app_page):
+    """Sliding a finger across the keyboard plays every key once, in order."""
+    page = app_page
+    open_hub(page)
+    page.click("#btn-game-piano")
+    page.click("#btn-piano-free")
+    first = page.locator(".piano-key[data-lane='0']").bounding_box()
+    last = page.locator(".piano-key[data-lane='7']").bounding_box()
+    y = first["y"] + first["height"] / 2
+    page.mouse.move(first["x"] + first["width"] / 2, y)
+    page.mouse.down()
+    page.mouse.move(last["x"] + last["width"] / 2, y, steps=40)
+    page.mouse.up()
+    assert page.get_attribute("#screen-game-piano", "data-presses") == "8"
+    assert page.get_attribute("#screen-game-piano", "data-last") == "72"
+    page.mouse.move(last["x"] + last["width"] / 2, y, steps=5)  # moving without pressing plays nothing
+    assert page.get_attribute("#screen-game-piano", "data-presses") == "8"
+
+
 def test_piano_song_ends_with_stars(app_page):
     page = app_page
     open_hub(page)
