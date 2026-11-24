@@ -5,6 +5,7 @@
  */
 import { loadState, saveState } from './storage.js';
 import { buildIconSprite } from './art.js';
+import { unlockAll, persistable } from './devmode.js';
 import { Music } from './music.js';
 import { ScreenKeeper } from './wakelock.js';
 import { createStartScreen } from './screens/start.js';
@@ -45,6 +46,7 @@ function boot() {
   if (!root) return;
   const fast = new URLSearchParams(location.search).has(FAST_PARAM);
   let state = loadState();
+  let devMode = false;
   const music = new Music();
   music.configure(state.settings);
   /** @type {Map<string, import('./screens/base.js').Screen>} */
@@ -54,8 +56,14 @@ function boot() {
 
   /** @type {import('./screens/base.js').AppContext} */
   const ctx = {
-    getState: () => state,
-    setState: (next) => { state = next; saveState(state); },
+    getState: () => (devMode ? unlockAll(state) : state),
+    setState: (next) => {
+      state = devMode ? persistable(state, next) : next;
+      saveState(state);
+    },
+    getSavedState: () => state,
+    isDevMode: () => devMode,
+    setDevMode: (on) => { devMode = on; },
     show: (name, data) => {
       const next = screens.get(name);
       if (!next) throw new Error(`Unbekannter Bildschirm: ${name}`);

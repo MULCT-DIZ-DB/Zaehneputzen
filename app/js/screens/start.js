@@ -53,6 +53,7 @@ export function createStartScreen(ctx) {
   const { section, body } = makeScreen('start');
   const greeting = el('h1', { id: 'greeting', cls: 'greeting' });
   const streak = el('p', { cls: 'streak-badge' });
+  const devBadge = el('span', { cls: 'dev-badge', id: 'dev-badge', text: TEXT.devBadge });
   const stage = el('div', { cls: 'stage' });
   const parents = iconButton('eltern', TEXT.parentsHint, () => {}, 'btn-parents', { id: 'btn-parents' });
   onLongPress(parents, UI.parentHoldMs, () => ctx.show('parents'));
@@ -66,7 +67,7 @@ export function createStartScreen(ctx) {
     iconButton('kleid', TEXT.dressUp, () => ctx.show('dress'), '', { id: 'btn-dress', showLabel: true }),
     iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
   ]);
-  body.append(parents, el('div', { cls: 'start-layout' }, [
+  body.append(parents, devBadge, el('div', { cls: 'start-layout' }, [
     stage,
     el('div', { cls: 'start-panel' }, [greeting, el('p', { cls: 'subtitle', text: TEXT.ready }), streak, startBtn, menu]),
   ]));
@@ -76,6 +77,7 @@ export function createStartScreen(ctx) {
     el: section,
     enter() {
       const state = ctx.getState();
+      devBadge.hidden = !ctx.isDevMode();
       greeting.textContent = state.name ? `${TEXT.greeting} ${state.name}!` : `${TEXT.greeting}!`;
       const days = computeStreak(state.calendar, new Date());
       streak.textContent = days > 0 ? `★ ${days} ${TEXT.streak}` : '';

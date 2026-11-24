@@ -3,7 +3,7 @@
  * Dress-up screen: choose outfit pieces and stroke the flip sequins.
  * @module screens/dress
  */
-import { TEXT, OUTFITS, OUTFIT_SLOTS, SEQUINS } from '../config.js';
+import { TEXT, OUTFITS, OUTFIT_SLOTS, SEQUINS, MOVES } from '../config.js';
 import { el, clear } from '../dom.js';
 import { drawDancer, drawOutfitPreview, SEQUIN_POINTS } from '../dancer.js';
 import { createIndex, strokeFlips, encodeStates, flipAll } from '../sequins.js';
@@ -40,6 +40,8 @@ export function createDressScreen(ctx) {
   body.append(el('div', { cls: 'dress-layout' }, [el('div', { cls: 'dress-left' }, [stage, flipHint, flipBtn]), wardrobe]));
 
   /** @type {Object<string, boolean[]>} */ let states = {};
+  /** @type {SVGElement|null} */ let dancerSvg = null;
+  let currentMove = '';
   let animating = 0;
 
   /** @returns {string[]} Worn sequin outfit ids. */
@@ -122,6 +124,8 @@ export function createDressScreen(ctx) {
     clear(stage);
     const dancer = /** @type {SVGSVGElement} */ (drawDancer({ wearing: state.wearing, sequinStates: states, cls: 'dress-dancer' }));
     stage.append(dancer);
+    dancerSvg = dancer;
+    if (currentMove) dancer.classList.add(currentMove);
     bindStroke(dancer);
     const hasSequins = wornSequins().length > 0;
     flipHint.hidden = !hasSequins;
@@ -136,6 +140,7 @@ export function createDressScreen(ctx) {
    */
   function renderWardrobe(state) {
     clear(wardrobe);
+    wardrobe.append(movesRow(state));
     if (state.outfits.length === 0) {
       wardrobe.append(el('p', { cls: 'empty', text: TEXT.nothingToWear }));
       return;
@@ -153,6 +158,30 @@ export function createDressScreen(ctx) {
   }
 
   /**
+   * Row of owned dance moves; tapping one lets the dancer perform it (tap again to stop).
+   * @param {import('../storage.js').State} state State.
+   * @returns {HTMLElement}
+   */
+  function movesRow(state) {
+    const owned = MOVES.filter((m) => state.moves.includes(m.id));
+    return el('div', { cls: 'moves-row' }, [el('h2', { cls: 'moves-title', text: TEXT.moves }), ...owned.map((m) => el('button', {
+      cls: `btn btn-small move-item${currentMove === m.css ? ' worn' : ''}`, text: m.name,
+      attrs: { type: 'button', 'data-move': m.id }, on: { click: () => playMove(m.css) } }))]);
+  }
+
+  /**
+   * Starts or stops a dance move on the dancer.
+   * @param {string} css Move CSS class.
+   * @returns {void}
+   */
+  function playMove(css) {
+    if (dancerSvg && currentMove) dancerSvg.classList.remove(currentMove);
+    currentMove = currentMove === css ? '' : css;
+    if (dancerSvg && currentMove) dancerSvg.classList.add(currentMove);
+    renderWardrobe(ctx.getState());
+  }
+
+  /**
    * Puts an item on (replacing the slot) or takes it off.
    * @param {string} id Outfit id.
    * @returns {void}
@@ -167,5 +196,5 @@ export function createDressScreen(ctx) {
     render();
   }
 
-  return { name: 'dress', el: section, enter: render };
+  return { name: 'dress', el: section, enter() { currentMove = ''; render(); } };
 }

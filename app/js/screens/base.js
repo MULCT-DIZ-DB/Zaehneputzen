@@ -12,7 +12,10 @@ import { icon } from '../art.js';
 /**
  * @typedef {Object} AppContext
  * @property {() => State} getState Current state.
- * @property {(s: State) => void} setState Replaces and saves the state.
+ * @property {(s: State) => void} setState Replaces and saves the state (in developer mode only editable fields).
+ * @property {() => State} getSavedState Real saved state (ignores the developer-mode view).
+ * @property {() => boolean} isDevMode True while developer mode is on (not saved; ends on reload).
+ * @property {(on: boolean) => void} setDevMode Switches developer mode.
  * @property {(name: string, data?: any) => void} show Switches the screen.
  * @property {boolean} fast Debug fast mode (`?schnell=1`).
  * @property {import('../music.js').Music} music Sound.
