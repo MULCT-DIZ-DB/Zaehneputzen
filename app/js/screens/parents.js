@@ -7,6 +7,8 @@ import { TEXT, TIMER, ZONE_ORDERS, MAX_NAME_LENGTH } from '../config.js';
 import { el } from '../dom.js';
 import { defaultState } from '../storage.js';
 import { makeScreen, textButton } from './base.js';
+import { createDevPanel } from './devpanel.js';
+import { createBackupPanel } from './backuppanel.js';
 
 /**
  * Labelled form row.
@@ -51,9 +53,13 @@ export function createParentsScreen(ctx) {
   });
   const reset = textButton(TEXT.reset, () => {
     if (!window.confirm(TEXT.resetConfirm)) return;
+    ctx.setDevMode(false);
+    dev.refresh();
     const fresh = defaultState();
     ctx.setState({ ...fresh, name: ctx.getState().name, settings: ctx.getState().settings });
   }, 'btn-small btn-danger', 'btn-reset');
+  const dev = createDevPanel(ctx);
+  const backup = createBackupPanel(ctx, () => { fillForm(); dev.refresh(); });
   const close = textButton(TEXT.close, () => ctx.show('start'), 'btn-big', 'btn-parents-close');
   body.append(el('form', { cls: 'parents-form', attrs: { autocomplete: 'off' }, on: { submit: (e) => e.preventDefault() } }, [
     row(TEXT.nameLabel, name),
@@ -61,19 +67,26 @@ export function createParentsScreen(ctx) {
     row(TEXT.orderLabel, order),
     row(TEXT.musicLabel, music),
     row(TEXT.volumeLabel, volume),
-  ]), el('div', { cls: 'parents-actions' }, [reset, close]));
+  ]), el('div', { cls: 'parents-actions' }, [reset, close]), backup.el, dev.el);
+
+  /** Fills the form from the state. @returns {void} */
+  function fillForm() {
+    const { name: n, settings: s } = ctx.getState();
+    name.value = n;
+    total.value = String(s.totalSec);
+    totalValue.textContent = `${s.totalSec} ${TEXT.seconds}`;
+    order.value = s.zoneOrder;
+    music.checked = s.music;
+    volume.value = String(s.volume);
+  }
 
   return {
     name: 'parents',
     el: section,
     enter() {
-      const { name: n, settings: s } = ctx.getState();
-      name.value = n;
-      total.value = String(s.totalSec);
-      totalValue.textContent = `${s.totalSec} ${TEXT.seconds}`;
-      order.value = s.zoneOrder;
-      music.checked = s.music;
-      volume.value = String(s.volume);
+      fillForm();
+      dev.refresh();
+      backup.refresh();
     },
   };
 }
