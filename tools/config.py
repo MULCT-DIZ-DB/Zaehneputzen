@@ -73,8 +73,9 @@ LICENCE_FILES = ("app/fonts/OFL.txt",)
 ALLOWED_IPS = ("127.0.0.1", "0.0.0.0", "10.255.255.255")  # last one: fixed probe address in serve.local_ip()
 
 #: Parallel test workers (pytest-xdist). Each runs its own server and browser, so the load must stay low:
-#: at most 4 workers and never more than a quarter of the CPU cores (the computer must stay usable).
-MAX_TEST_WORKERS = 4
+#: never more than a quarter of the CPU cores (the computer must stay usable). Measured: Playwright's WebKit
+#: on Windows stalls or hangs when 3 or more instances start together; 2 run reliably.
+MAX_TEST_WORKERS = 2
 TEST_WORKERS = max(1, min(MAX_TEST_WORKERS, (os.cpu_count() or 1) // 4))
 
 #: Fake URL used to load an empty same-origin page for module tests.

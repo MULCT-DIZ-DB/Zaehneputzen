@@ -270,6 +270,8 @@ export const PIANO = Object.freeze({
   leadInMs: 2500,
   /** Time a note needs from the top of its lane to the hit line (ms). */
   travelMs: 2400,
+  /** Height of the target line above the bottom of the lane (share of the lane height). */
+  hitLineShare: 0.16,
   /** Forgiving timing: a tap within ± this many ms of a note counts. */
   hitWindowMs: 350,
   /** Pause after the last note before the result appears (ms). */

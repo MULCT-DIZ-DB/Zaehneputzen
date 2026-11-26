@@ -260,3 +260,30 @@ def test_game_screens_fit_and_have_big_buttons(app_page):
                 assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (game, viewport, cls, w, h)
         page.set_viewport_size(config.IPAD_LANDSCAPE)
         page.click(f"#screen-game-{game} .btn-back")
+
+
+def test_piano_hit_zone_matches_timing(app_page):
+    """A see-through zone above each key shows where to hit: its middle is where a note is exactly on time,
+    its height is the forgiving ±window. The touch glow only reaches half way up the lane."""
+    page = app_page
+    open_hub(page)
+    page.click("#btn-game-piano")
+    page.click("#btn-piano-free")
+    page.click(".piano-key[data-lane='3']")
+    info = page.evaluate("""async () => {
+        const { PIANO } = await import('./js/config.js');
+        const lane = document.querySelector(".piano-lane[data-lane='3']");
+        const zone = lane.querySelector('.hit-zone');
+        const l = lane.getBoundingClientRect(), z = zone.getBoundingClientRect();
+        const glow = parseFloat(getComputedStyle(lane, '::before').height);
+        return { zones: document.querySelectorAll('.hit-zone').length, laneTop: l.top, laneH: l.height,
+                 zoneMid: z.top + z.height / 2, zoneH: z.height, glow, P: PIANO };
+    }""")
+    p = info["P"]
+    on_time_y = info["laneTop"] + info["laneH"] * (1 - p["hitLineShare"])  # note centre at its hit time
+    assert info["zones"] == 8
+    assert abs(info["zoneMid"] - on_time_y) < 2, info
+    expected_h = 2 * info["laneH"] * (1 - p["hitLineShare"]) * p["hitWindowMs"] / p["travelMs"]
+    assert abs(info["zoneH"] - expected_h) < 2, info
+    assert info["zoneMid"] + info["zoneH"] / 2 <= info["laneTop"] + info["laneH"] + 1, "zone fully visible above the key"
+    assert info["glow"] <= info["laneH"] * 0.55, "touch glow only half way up"

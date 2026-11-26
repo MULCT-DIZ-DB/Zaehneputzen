@@ -24,7 +24,11 @@ export function createPianoGameScreen(ctx) {
   });
   const hitsText = el('p', { cls: 'game-status', id: 'piano-hits' });
   const lanes = el('div', { cls: 'piano-lanes' }, PIANO.keys.map((_, i) => el('div', { cls: 'piano-lane',
-    attrs: { 'data-lane': i, style: `--key-color: ${PALETTE[PIANO.keyColors[i]]}` } })));
+    attrs: { 'data-lane': i, style: `--key-color: ${PALETTE[PIANO.keyColors[i]]}` } }, [el('div', { cls: 'hit-zone' })])));
+  // Target line and zone: a note is on time at the line; the zone covers the forgiving +-window around it.
+  const onTimeShare = 1 - PIANO.hitLineShare;
+  lanes.style.setProperty('--hit-line', `${PIANO.hitLineShare * 100}%`);
+  lanes.style.setProperty('--hit-half', `${(onTimeShare * PIANO.hitWindowMs * 100) / PIANO.travelMs}%`);
   const keys = PIANO.keys.map((midi, lane) => el('button', {
     cls: 'btn piano-key', attrs: { type: 'button', 'data-lane': lane, 'aria-label': PIANO.keyNames[lane],
       style: `--key-color: ${PALETTE[PIANO.keyColors[lane]]}` },
@@ -120,7 +124,7 @@ export function createPianoGameScreen(ctx) {
   function spawnNote(i) {
     const n = chart[i];
     const total = PIANO.travelMs * PIANO.overshoot;
-    const fallPx = lanes.clientHeight * PIANO.overshoot;
+    const fallPx = lanes.clientHeight * onTimeShare * PIANO.overshoot; // centre reaches the target line on time
     const note = el('div', { cls: 'piano-note', attrs: { 'data-i': i, style: `--key-color: ${PALETTE[PIANO.keyColors[n.lane]]}` } });
     lanes.children[n.lane].append(note);
     noteEls.set(i, note);
