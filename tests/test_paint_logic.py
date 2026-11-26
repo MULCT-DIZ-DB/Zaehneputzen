@@ -1,6 +1,4 @@
 """Pure logic of the colouring game: paint mixing (RYB), palette, tools, flood fill, undo."""
-import pytest
-
 PRE = """
 const P = await import('./js/paint/engine.js');
 const cfg = (await import('./js/config.js')).PAINT;
@@ -26,38 +24,22 @@ def test_ryb_colours_look_right(js):
     assert max(all3) < 90, "all three = dark brown"
 
 
-@pytest.mark.parametrize("a,b,check", [
-    ("RED", "BLUE", "violet"), ("BLUE", "RED", "violet"), ("YELLOW", "BLUE", "green"),
-    ("RED", "YELLOW", "orange"),
-])
-def test_painting_over_mixes_like_paint(js, a, b, check):
-    res = run(js, f"""
-        const b = buf();
-        P.applyDab(b, 20, 15, 6, {a}, {{ hard: true }});
-        P.applyDab(b, 20, 15, 6, {b}, {{ hard: true }});
-        const p = px(b, 20, 15);
-        return [rgbOf(p.pig.map(v => v / 255)), p.cov];
-    """)
-    (r, g, bl), cov = res
-    assert cov == 255
-    if check == "violet":
-        assert r > g + 40 and bl > g + 40, (r, g, bl)
-    if check == "green":
-        assert g > r + 40 and g > bl, (r, g, bl)
-    if check == "orange":
-        assert r > g > bl and r - bl > 120, (r, g, bl)
-
-
-def test_same_colour_twice_stays_the_same(js):
+def test_painting_over_mixes_like_paint(js):
+    """Red over blue (either order) = violet, yellow over blue = green, red over yellow = orange; same colour twice unchanged."""
     res = run(js, """
-        const b = buf();
-        P.applyDab(b, 20, 15, 6, RED, { hard: true });
-        const once = px(b, 20, 15).pig.join();
-        P.applyDab(b, 20, 15, 6, RED, { hard: true });
-        return [once, px(b, 20, 15).pig.join()];
+        const mix = (a, b) => { const k = buf(); P.applyDab(k, 20, 15, 6, a, { hard: true }); P.applyDab(k, 20, 15, 6, b, { hard: true });
+                                const p = px(k, 20, 15); return [rgbOf(p.pig.map(v => v / 255)), p.cov, p.pig.join()]; };
+        return [mix(RED, BLUE), mix(BLUE, RED), mix(YELLOW, BLUE), mix(RED, YELLOW), mix(RED, RED)[2], px((() => {
+            const k = buf(); P.applyDab(k, 20, 15, 6, RED, { hard: true }); return k; })(), 20, 15).pig.join()];
     """)
-    assert res[0] == res[1]
-
+    violet1, violet2, green, orange, red_twice, red_once = res
+    for (r, g, b), cov, _ in (violet1, violet2):
+        assert cov == 255 and r > g + 40 and b > g + 40, (r, g, b)
+    (r, g, b), _, _ = green
+    assert g > r + 40 and g > b, (r, g, b)
+    (r, g, b), _, _ = orange
+    assert r > g > b and r - b > 120, (r, g, b)
+    assert red_twice == red_once, "painting the same colour twice changes nothing"
 
 def test_white_covers_and_eraser_clears(js):
     res = run(js, """
@@ -139,11 +121,10 @@ def test_undo_restores_previous_steps(js):
     after_two, after_undo1, after_undo2, extra_pop, size = res
     assert after_two == "255,0,255" and after_undo1 == "255,0,0" and after_undo2 == 0
     assert extra_pop is False and size == 0
+    kept = run(js, "const b = buf(); const u = P.createUndo(3); for (let i = 0; i < 7; i++) u.push(b); return u.size();")
+    assert kept == 3, "only the last steps are kept"
 
 
-def test_undo_keeps_only_the_last_steps(js):
-    res = run(js, "const b = buf(); const u = P.createUndo(3); for (let i = 0; i < 7; i++) u.push(b); return u.size();")
-    assert res == 3
 
 
 def test_palette_wheel(js):

@@ -1,82 +1,48 @@
 """Pure logic of the three mini games (dance memory, piano, sugar hunt)."""
-import pytest
 
 # ---------- Tanzschritte merken ----------
 
 
-def test_dance_config(js):
-    d = js("return m.config.DANCE_GAME;")
-    ids = [p["id"] for p in d["poses"]]
-    assert len(ids) == 4 and len(set(ids)) == 4
-    for p in d["poses"]:
-        assert p["name"] and p["css"].startswith("move-") and isinstance(p["note"], int)
-    assert 1 <= d["startLength"] < d["maxLength"] == 8
-
-
-@pytest.mark.parametrize("length", [1, 2, 5, 8])
-def test_sequence_length_and_poses(js, length):
+def test_dance_memory(js):
     res = js("""
-        const out = [];
-        for (let i = 0; i < 50; i++) out.push(m.dancememory.makeSequence(arg, Math.random));
-        return [out, m.config.DANCE_GAME.poses.map(p => p.id)];
-    """, length)
-    seqs, ids = res
-    for s in seqs:
-        assert len(s) == length and set(s) <= set(ids)
-
-
-def test_check_tap_paths(js):
-    res = js("""
+        const seqs = [1, 2, 5, 8].map(n => Array.from({ length: 30 }, () => m.dancememory.makeSequence(n, Math.random)));
         const seq = ['welle', 'huepfer', 'welle'];
-        return [m.dancememory.checkTap(seq, 0, 'welle'), m.dancememory.checkTap(seq, 1, 'huepfer'),
-                m.dancememory.checkTap(seq, 2, 'welle'), m.dancememory.checkTap(seq, 1, 'welle'),
-                m.dancememory.checkTap(seq, 5, 'welle')];
+        const taps = [[0, 'welle'], [1, 'huepfer'], [2, 'welle'], [1, 'welle'], [5, 'welle']].map(([i, p]) => m.dancememory.checkTap(seq, i, p));
+        return [m.config.DANCE_GAME, seqs, taps, [2, 3, 7, 8, 12].map(n => m.dancememory.nextLength(n))];
     """)
-    assert res == ["next", "next", "done", "wrong", "wrong"]
-
-
-def test_next_length_capped(js):
-    res = js("return [2, 3, 7, 8, 12].map(n => m.dancememory.nextLength(n));")
-    assert res == [3, 4, 8, 8, 8]
+    cfg, seqs, taps, lengths = res
+    ids = [p["id"] for p in cfg["poses"]]
+    assert len(set(ids)) == 4 and all(p["name"] and p["css"].startswith("move-") for p in cfg["poses"])
+    assert 1 <= cfg["startLength"] < cfg["maxLength"] == 8
+    for n, group in zip([1, 2, 5, 8], seqs):
+        assert all(len(s) == n and set(s) <= set(ids) for s in group), n
+    assert taps == ["next", "next", "done", "wrong", "wrong"]
+    assert lengths == [3, 4, 8, 8, 8], "grows by one, capped at 8"
 
 
 # ---------- Klavier ----------
 
 
-def test_piano_keys(js):
-    p = js("return m.config.PIANO;")
+def test_piano_keys_and_songs(js):
+    p, songs = js("return [m.config.PIANO, m.songs.SONGS];")
     assert p["keys"] == [60, 62, 64, 65, 67, 69, 71, 72]
     assert p["keyNames"] == ["C", "D", "E", "F", "G", "A", "H", "C"]
     assert p["hitWindowMs"] == 350 and p["travelMs"] > 1000
-
-
-def test_songs_only_use_the_keys(js):
-    res = js("return [m.songs.SONGS, m.config.PIANO.keys];")
-    songs, keys = res
-    assert len(songs) == 5
     assert len({s["id"] for s in songs}) == 5
     for s in songs:
         assert s["name"] and 40 <= s["bpm"] <= 90, s["id"]
         assert 90 <= s["originalBpm"] <= 140 and s["bpm"] < s["originalBpm"] * 0.75, s["id"]
-        assert len(s["notes"]) >= 12, s["id"]
-        for midi, beats in s["notes"]:
-            assert midi in keys and beats > 0, (s["id"], midi)
+        assert len(s["notes"]) >= 12 and all(midi in p["keys"] and beats > 0 for midi, beats in s["notes"]), s["id"]
 
 
-def test_chart_times_increase(js):
-    res = js("return m.songs.SONGS.map(s => m.piano.buildChart(s));")
-    lead = js("return m.config.PIANO.leadInMs;")
-    for chart in res:
+def test_charts(js):
+    charts, small, lead = js("""return [m.songs.SONGS.map(s => m.piano.buildChart(s)),
+        m.piano.buildChart({ id: 't', name: 't', bpm: 60, notes: [[60, 1], [64, 2], [67, 1]] }), m.config.PIANO.leadInMs];""")
+    for chart in charts:
         times = [n["timeMs"] for n in chart]
-        assert times[0] == lead
-        assert times == sorted(times) and len(set(times)) == len(times)
+        assert times[0] == lead and times == sorted(times) and len(set(times)) == len(times)
         assert all(0 <= n["lane"] <= 7 for n in chart)
-
-
-def test_chart_timing_from_bpm(js):
-    res = js("return m.piano.buildChart({ id: 't', name: 't', bpm: 60, notes: [[60, 1], [64, 2], [67, 1]] });")
-    lead = js("return m.config.PIANO.leadInMs;")
-    assert [(n["lane"], n["timeMs"], n["midi"]) for n in res] == [(0, lead, 60), (2, lead + 1000, 64), (4, lead + 3000, 67)]
+    assert [(n["lane"], n["timeMs"], n["midi"]) for n in small] == [(0, lead, 60), (2, lead + 1000, 64), (4, lead + 3000, 67)]
 
 
 def test_tempo_levels(js):
@@ -90,72 +56,45 @@ def test_tempo_levels(js):
     """)
     ids, bpm, second, slow, original, unknown = res
     assert ids == ["langsam", "mittel", "normal"]
-    assert bpm[0] == slow and bpm[2] == original
-    assert 0.75 * original <= bpm[1] <= 0.9 * original
+    assert bpm[0] == slow and bpm[2] == original and 0.75 * original <= bpm[1] <= 0.9 * original
     assert second == [round(60000 / b) for b in bpm]
     assert unknown == slow, "unknown tempo falls back to slow"
 
 
-def test_hit_window_edges(js):
-    res = js("""
-        const chart = [{ lane: 0, timeMs: 1000, midi: 60 }, { lane: 0, timeMs: 3000, midi: 60 }, { lane: 2, timeMs: 1000, midi: 64 }];
-        const w = m.config.PIANO.hitWindowMs;
-        const j = (lane, t, hits = new Set()) => m.piano.judgeTap(chart, hits, lane, t);
-        const hits = new Set([0]);
-        return [j(0, 1000), j(0, 1000 - w), j(0, 1000 + w), j(0, 1000 + w + 1), j(1, 1000), j(2, 1100),
-                j(0, 1000, hits), j(0, 2900)];
-    """)
-    assert res == [0, 0, 0, None, None, 2, None, 1]
-
-
-def test_fall_progress(js):
+def test_hits_falling_and_stars(js):
     res = js("""
         const P = m.config.PIANO;
-        const t = 5000;
-        return [m.piano.fallProgressMs(t, t - P.travelMs), m.piano.fallProgressMs(t, t - P.travelMs - 500),
-                m.piano.fallProgressMs(t, t), m.piano.fallProgressMs(t, t - 1000), m.piano.fallProgressMs(t, t + 99999),
-                P.travelMs, P.travelMs * P.overshoot];
+        const chart = [{ lane: 0, timeMs: 1000, midi: 60 }, { lane: 0, timeMs: 3000, midi: 60 }, { lane: 2, timeMs: 1000, midi: 64 }];
+        const w = P.hitWindowMs;
+        const j = (lane, t, hits = new Set()) => m.piano.judgeTap(chart, hits, lane, t);
+        const judge = [j(0, 1000), j(0, 1000 - w), j(0, 1000 + w), j(0, 1000 + w + 1), j(1, 1000), j(2, 1100),
+                       j(0, 1000, new Set([0])), j(0, 2900)];
+        const t = 5000, f = x => m.piano.fallProgressMs(t, x);
+        const fall = [f(t - P.travelMs), f(t - P.travelMs - 500), f(t), f(t - 1000), f(t + 99999)];
+        const stars = [[0, 10], [5, 10], [10, 10], [9, 10], [0, 0]].map(([h, n]) => m.piano.starsFor(h, n));
+        return [judge, fall, P.travelMs, P.travelMs * P.overshoot, stars];
     """)
-    on_time, early, at_line, late, way_late, travel, full = res
-    assert on_time == 0 and early == 0, "spawned on time starts at the top"
-    assert at_line == travel and late == travel - 1000
-    assert way_late == full
-
-
-@pytest.mark.parametrize("hit,total,stars", [(0, 10, 1), (5, 10, 2), (10, 10, 3), (9, 10, 3), (0, 0, 1)])
-def test_stars(js, hit, total, stars):
-    assert js("return m.piano.starsFor(arg[0], arg[1]);", [hit, total]) == stars
+    judge, fall, travel, full, stars = res
+    assert judge == [0, 0, 0, None, None, 2, None, 1], "hit window edges, no double hit, nearest note"
+    assert fall == [0, 0, travel, travel - 1000, full], "notes start at the top and are synced to the song clock"
+    assert stars == [1, 2, 3, 3, 1], "always at least one star"
 
 
 # ---------- Zuckerjagd ----------
 
 
-def test_lifetime_shrinks_to_minimum(js):
+def test_sugar_hunt_rules(js):
     res = js("""
         const S = m.config.SUGAR;
-        return [m.sugarhunt.lifetimeAt(0), m.sugarhunt.lifetimeAt(S.roundMs / 2), m.sugarhunt.lifetimeAt(S.roundMs),
-                m.sugarhunt.lifetimeAt(S.roundMs * 3), S.startLifeMs, S.minLifeMs];
-    """)
-    start, mid, end, late, start_cfg, min_cfg = res
-    assert start == start_cfg and end == min_cfg and late == min_cfg
-    assert start > mid > end
-
-
-def test_spawn_delay_shrinks(js):
-    res = js("const S = m.config.SUGAR; return [m.sugarhunt.spawnDelayAt(0), m.sugarhunt.spawnDelayAt(S.roundMs)];")
-    assert res[0] > res[1] > 0
-
-
-def test_max_bugs_and_free_teeth(js):
-    res = js("""
-        const S = m.config.SUGAR;
+        const life = [0, S.roundMs / 2, S.roundMs, S.roundMs * 3].map(t => m.sugarhunt.lifetimeAt(t));
+        const spawn = [m.sugarhunt.spawnDelayAt(0), m.sugarhunt.spawnDelayAt(S.roundMs)];
         const can = [0, 1, S.maxBugs - 1, S.maxBugs, S.maxBugs + 1].map(n => m.sugarhunt.canSpawn(n));
-        const picks = [];
-        for (let i = 0; i < 200; i++) picks.push(m.sugarhunt.pickTooth(Math.random, [0, 1, 2]));
+        const picks = Array.from({ length: 200 }, () => m.sugarhunt.pickTooth(Math.random, [0, 1, 2]));
         const all = Array.from({ length: S.toothCount }, (_, i) => i);
-        return [can, picks, m.sugarhunt.pickTooth(Math.random, all), S.toothCount, S.maxBugs];
+        return [S, life, spawn, can, picks, m.sugarhunt.pickTooth(Math.random, all)];
     """)
-    can, picks, none_left, tooth_count, max_bugs = res
-    assert max_bugs == 3 and can == [True, True, True, False, False]
-    assert all(p not in (0, 1, 2) and 0 <= p < tooth_count for p in picks)
-    assert none_left is None
+    s, life, spawn, can, picks, none_left = res
+    assert life[0] == s["startLifeMs"] and life[0] > life[1] > life[2] == life[3] == s["minLifeMs"]
+    assert spawn[0] > spawn[1] > 0, "bugs come faster towards the end"
+    assert s["maxBugs"] == 3 and can == [True, True, True, False, False]
+    assert all(p not in (0, 1, 2) and 0 <= p < s["toothCount"] for p in picks) and none_left is None

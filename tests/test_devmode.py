@@ -1,7 +1,5 @@
 """Tests for the developer mode: multiplication gate and 'everything unlocked' view."""
-import pytest
-
-from test_ui import active_screen, open_parents
+from test_ui import active_screen, open_parents, solve_gate
 
 
 def test_challenge_uses_single_digits(js):
@@ -20,12 +18,11 @@ def test_challenge_uses_single_digits(js):
     assert edges[1] == {"a": dev["maxFactor"], "b": dev["maxFactor"]}
 
 
-@pytest.mark.parametrize("answer,ok", [
-    ("56", True), (" 56 ", True), ("056", True), ("55", False), ("", False), ("abc", False),
-    ("56.0", False), ("5 6", False), ("-56", False), ("56abc", False), (None, False), (56, False),
-])
-def test_check_answer(js, answer, ok):
-    assert js("return m.devmode.checkAnswer({ a: 7, b: 8 }, arg);", answer) is ok
+def test_check_answer(js):
+    cases = [("56", True), (" 56 ", True), ("056", True), ("55", False), ("", False), ("abc", False),
+             ("56.0", False), ("5 6", False), ("-56", False), ("56abc", False), (None, False), (56, False)]
+    res = js("return arg.map(a => m.devmode.checkAnswer({ a: 7, b: 8 }, a));", [c[0] for c in cases])
+    assert res == [c[1] for c in cases]
 
 
 def test_unlock_all_view_does_not_mutate(js):
@@ -53,11 +50,8 @@ def test_persistable_keeps_real_progress(js):
 
 
 def solve(page) -> None:
-    """Answers the shown multiplication correctly."""
-    a = int(page.get_attribute("#dev-question", "data-a"))
-    b = int(page.get_attribute("#dev-question", "data-b"))
-    page.fill("#input-dev", str(a * b))
-    page.click("#btn-dev-check")
+    """Answers the developer-mode multiplication correctly."""
+    solve_gate(page, "dev")
 
 
 def test_dev_mode_unlocks_everything_in_ui(app_page, base_url):
@@ -87,7 +81,8 @@ def test_dev_mode_unlocks_everything_in_ui(app_page, base_url):
     assert not page.is_visible("#dev-badge"), "dev mode ends on reload"
 
 
-def test_wrong_answer_keeps_dev_mode_off(app_page):
+def test_wrong_answer_then_on_and_off(app_page):
+    """A wrong answer keeps developer mode off; a right one turns it on; it can be switched off again."""
     page = app_page
     open_parents(page)
     page.click("#btn-dev")
@@ -96,17 +91,10 @@ def test_wrong_answer_keeps_dev_mode_off(app_page):
     page.fill("#input-dev", str(a * b + 1))
     page.click("#btn-dev-check")
     assert page.is_visible("#dev-wrong") and not page.is_visible("#dev-active")
-    page.click("#btn-parents-close")
-    assert active_screen(page) == "screen-start" and not page.is_visible("#dev-badge")
-
-
-def test_dev_mode_can_be_switched_off(app_page):
-    page = app_page
-    open_parents(page)
-    page.click("#btn-dev")
     solve(page)
+    assert page.is_visible("#dev-active")
     page.click("#btn-dev-off")
     page.click("#btn-parents-close")
-    assert not page.is_visible("#dev-badge")
+    assert active_screen(page) == "screen-start" and not page.is_visible("#dev-badge")
     page.click("#btn-album")
     assert page.locator(".sticker-slot.owned").count() == 0

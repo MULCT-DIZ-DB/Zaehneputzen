@@ -21,20 +21,20 @@ def seeded_page(app_page, base_url):
     return app_page
 
 
-@pytest.mark.parametrize("viewport", [config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT])
-def test_sticker_zoom_covers_half_the_display(seeded_page, viewport):
+def test_sticker_zoom_covers_half_the_display(seeded_page):
     page = seeded_page
-    page.set_viewport_size(viewport)
     page.click("#btn-album")
     assert not page.is_visible("#sticker-zoom")
     page.locator(".sticker-slot.owned").first.click()
     assert page.is_visible("#sticker-zoom")
-    # Layout size (ignores the short zoom-in animation transform).
-    box = page.eval_on_selector("#sticker-zoom .zoom-sticker", "e => ({"
-                                " x: e.offsetLeft, width: e.offsetWidth, height: e.offsetHeight })")
-    ratio = box["width"] * box["height"] / (viewport["width"] * viewport["height"])
-    assert 0.35 <= ratio <= 0.6, ratio
-    assert box["x"] >= 0 and box["x"] + box["width"] <= viewport["width"]
+    for viewport in (config.IPAD_PORTRAIT, config.IPAD_LANDSCAPE):
+        page.set_viewport_size(viewport)
+        # Layout size (ignores the short zoom-in animation transform).
+        box = page.eval_on_selector("#sticker-zoom .zoom-sticker", "e => ({"
+                                    " x: e.offsetLeft, width: e.offsetWidth, height: e.offsetHeight })")
+        ratio = box["width"] * box["height"] / (viewport["width"] * viewport["height"])
+        assert 0.35 <= ratio <= 0.6, (viewport, ratio)
+        assert box["x"] >= 0 and box["x"] + box["width"] <= viewport["width"]
     assert "Stern" in page.inner_text("#sticker-zoom")
     page.mouse.click(10, viewport["height"] - 10)
     assert not page.is_visible("#sticker-zoom")

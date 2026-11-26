@@ -2,8 +2,6 @@
 
 Dates are created inside the browser with local time (context time zone Europe/Berlin).
 """
-import pytest
-
 # Helper available in every snippet: d(y, mo, day, h) -> local Date (month 1-based); rng0 = always first.
 PRE = """
 const d = (y, mo, day, h = 8) => new Date(y, mo - 1, day, h, 0, 0);
@@ -17,17 +15,11 @@ def run(js, body, arg=None):
     return js(PRE + body, arg)
 
 
-def test_date_key_uses_local_date(js):
+def test_date_key_and_slot(js):
     res = run(js, "return [m.rewards.dateKey(d(2026,11,25,0)), m.rewards.dateKey(d(2026,1,5,23)),"
-                  " m.rewards.dateKey(d(2028,2,29,12))];")
-    assert res == ["2026-11-25", "2026-01-05", "2028-02-29"]
-
-
-@pytest.mark.parametrize("hour,slot", [(0, "morgens"), (7, "morgens"), (13, "morgens"),
-                                       (14, "abends"), (19, "abends"), (23, "abends")])
-def test_slot_cutoff(js, hour, slot):
-    assert run(js, "return m.rewards.slotFor(d(2026,11,24,arg));", hour) == slot
-
+                  " m.rewards.dateKey(d(2028,2,29,12)), [0, 7, 13, 14, 19, 23].map(h => m.rewards.slotFor(d(2026,11,24,h)))];")
+    assert res[:3] == ["2026-11-25", "2026-01-05", "2028-02-29"], "local date, not UTC"
+    assert res[3] == ["morgens"] * 3 + ["abends"] * 3, "cut-off at 14:00"
 
 def test_completed_session_gives_sticker_and_marks_calendar(js):
     res = run(js, """
@@ -124,40 +116,20 @@ def full_days(start_day, count, month=11, year=2026):
         }}"""
 
 
-def test_streak_counts_full_days(js):
+def test_streak(js):
+    """Full days in a row, incl. half days, month/year end, leap day and EU daylight-saving switches."""
     res = run(js, "const cal = {};" + full_days(20, 5) + """
-        return [m.rewards.computeStreak(cal, d(2026,11,24,20)),
-                m.rewards.computeStreak(cal, d(2026,11,25,8)),
-                m.rewards.computeStreak(cal, d(2026,11,26,8))];""")
-    assert res == [5, 5, 0], "today unfinished keeps yesterday's streak, a missed day resets"
-
-
-def test_half_day_breaks_streak(js):
-    res = run(js, "const cal = {};" + full_days(20, 5) + """
+        const basic = [m.rewards.computeStreak(cal, d(2026,11,24,20)), m.rewards.computeStreak(cal, d(2026,11,25,8)),
+                       m.rewards.computeStreak(cal, d(2026,11,26,8))];
         cal['2026-11-22'] = { morgens: true, abends: false };
-        return m.rewards.computeStreak(cal, d(2026,11,24,20));""")
-    assert res == 2
-
-
-def test_streak_over_month_and_year_end(js):
-    res = run(js, "const cal = {};" + full_days(28, 6, month=12, year=2026) + """
-        return m.rewards.computeStreak(cal, d(2027,1,2,20));""")
-    assert res == 6
-
-
-def test_streak_over_leap_day(js):
-    res = run(js, "const cal = {};" + full_days(27, 4, month=2, year=2028) + """
-        return [Object.keys(cal).sort(), m.rewards.computeStreak(cal, d(2028,3,1,20))];""")
-    keys, streak = res
-    assert "2028-02-29" in keys and streak == 4
-
-
-def test_streak_over_daylight_saving_switch(js):
-    """EU summer time starts 2026-03-29 (23-hour day) and ends 2026-10-25 (25-hour day)."""
-    res = run(js, "const cal = {};" + full_days(27, 5, month=3) + full_days(23, 5, month=10) + """
-        return [m.rewards.computeStreak(cal, d(2026,3,31,23)), m.rewards.computeStreak(cal, d(2026,10,27,0))];""")
-    assert res == [5, 5]
-
+        const half = m.rewards.computeStreak(cal, d(2026,11,24,20));
+        return [basic, half];""")
+    assert res == [[5, 5, 0], 2], "unfinished today keeps yesterday's streak; a missed or half day resets"
+    edges = run(js, "const cal = {};" + full_days(28, 6, month=12, year=2026) + full_days(27, 4, month=2, year=2028)
+                + full_days(27, 5, month=3) + full_days(23, 5, month=10) + """
+        return [m.rewards.computeStreak(cal, d(2027,1,2,20)), m.rewards.computeStreak(cal, d(2028,3,1,20)),
+                m.rewards.computeStreak(cal, d(2026,3,31,23)), m.rewards.computeStreak(cal, d(2026,10,27,0))];""")
+    assert edges == [6, 4, 5, 5], "year end, leap day, summer time start, summer time end"
 
 def test_move_unlocked_at_streak_threshold(js):
     res = run(js, """

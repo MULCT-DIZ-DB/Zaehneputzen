@@ -39,17 +39,13 @@ def test_real_localstorage_round_trip(js):
     assert res == [True, "Mia"]
 
 
-def test_empty_storage_gives_defaults(js):
-    assert js("return m.storage.loadState(m.storage.memoryStorage());") == js("return m.storage.defaultState();")
-
-
-def test_broken_json_gives_defaults(js):
+def test_empty_or_broken_storage_gives_defaults(js):
     res = js("""
-        const mem = m.storage.memoryStorage();
-        mem.setItem(m.config.STORAGE_KEY, '{kaputt');
-        return m.storage.loadState(mem);
+        const empty = m.storage.memoryStorage();
+        const broken = m.storage.memoryStorage(); broken.setItem(m.config.STORAGE_KEY, '{kaputt');
+        return [m.storage.loadState(empty), m.storage.loadState(broken), m.storage.defaultState()];
     """)
-    assert res == js("return m.storage.defaultState();")
+    assert res[0] == res[2] and res[1] == res[2]
 
 
 def test_wrong_types_are_repaired(js):
@@ -85,15 +81,12 @@ def test_calendar_entries_validated(js):
                    "2026-02-29": {"morgens": False, "abends": False}}
 
 
-def test_migration_from_schema_0(js):
-    res = js("""return m.storage.migrate({ name: 'Alt', stickers: ['stern-rosa'] });""")
-    assert res["schema"] == js("return m.config.SCHEMA_VERSION;")
-    assert res["name"] == "Alt" and res["stickers"] == ["stern-rosa"]
-
-
-def test_future_schema_kept_readable(js):
-    res = js("""return m.storage.migrate({ ...m.storage.defaultState(), schema: 999, name: 'Neu' });""")
-    assert res["name"] == "Neu"
+def test_migration_old_and_future_schema(js):
+    res = js("""return [m.storage.migrate({ name: 'Alt', stickers: ['stern-rosa'] }),
+                        m.storage.migrate({ ...m.storage.defaultState(), schema: 999, name: 'Neu' }), m.config.SCHEMA_VERSION];""")
+    old, future, schema = res
+    assert old["schema"] == schema and old["name"] == "Alt" and old["stickers"] == ["stern-rosa"]
+    assert future["name"] == "Neu", "newer saves stay readable"
 
 
 def test_no_localstorage_available(js):

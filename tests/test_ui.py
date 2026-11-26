@@ -5,8 +5,6 @@ The app is opened with ``?schnell=1`` (short brushing time) from the ``app_page`
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import config  # noqa: E402
 
@@ -55,6 +53,7 @@ def test_full_brushing_flow_with_zone_changes(app_page):
     assert active_screen(page) == "screen-countdown"
     page.clock.run_for(fast_countdown_ms(page) + 100)
     assert active_screen(page) == "screen-brush"
+    assert page.locator("#screen-brush .dancer").count() == 0, "no character while brushing"
     zone_ms = fast_total_ms(page) // 6 + 1
     labels = []
     for _ in range(6):
@@ -155,21 +154,6 @@ def open_parents(page) -> None:
     solve_gate(page, "gate")
 
 
-def test_parents_menu_has_back_navigation(app_page):
-    open_parents(app_page)
-    assert active_screen(app_page) == "screen-parents"
-    app_page.click("#screen-parents .btn-back")
-    assert active_screen(app_page) == "screen-start"
-
-
-def test_no_character_while_brushing(app_page):
-    page = app_page
-    page.click("#btn-start")
-    page.clock.run_for(fast_countdown_ms(page) + 100)
-    assert active_screen(page) == "screen-brush"
-    assert page.locator("#screen-brush .dancer").count() == 0
-
-
 def test_confetti_keeps_falling_through_bottom_edge(app_page):
     page = app_page
     brush_through(page)
@@ -214,7 +198,8 @@ def test_parents_gate_needs_the_right_answer(app_page):
     assert active_screen(page) == "screen-start", "no more 3-second hold"
     open_parents(page)
     assert active_screen(page) == "screen-parents"
-    page.click("#btn-parents-close")
+    page.click("#screen-parents .btn-back")
+    assert active_screen(page) == "screen-start", "back arrow in the parent menu"
     page.click("#btn-parents")
     assert page.input_value("#input-gate") == "", "fresh task every time"
 
@@ -241,13 +226,16 @@ def test_calendar_and_dress_screens_open(app_page):
     assert not app_page.console_errors, app_page.console_errors
 
 
-@pytest.mark.parametrize("viewport", [config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT])
-def test_layout_fits_without_scrolling(app_page, viewport):
+def test_layout_fits_without_scrolling(app_page):
+    """Start and brushing screen fit both iPad orientations without scrolling."""
     page = app_page
-    page.set_viewport_size(viewport)
-    for btn in ("#btn-start", None):
-        if btn:
-            page.click(btn)
-            page.clock.run_for(fast_countdown_ms(page) + 100)
-        overflow = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
-        assert overflow[0] <= viewport["width"] + 1 and overflow[1] <= viewport["height"] + 1
+    page.click("#btn-start")
+    page.clock.run_for(fast_countdown_ms(page) + 100)
+    for screen in ("brush", "start"):
+        if screen == "start":
+            page.click("#btn-pause")
+            page.click("#btn-stop")
+        for viewport in (config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT):
+            page.set_viewport_size(viewport)
+            overflow = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
+            assert overflow[0] <= viewport["width"] + 1 and overflow[1] <= viewport["height"] + 1, (screen, viewport)

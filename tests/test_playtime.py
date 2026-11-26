@@ -1,6 +1,4 @@
 """Tests for the play window after brushing (``app/js/playtime.js``) and its stored values."""
-import pytest
-
 MIN = 60000
 NOW = 1_800_000_000_000  # fixed epoch ms for pure tests
 
@@ -32,17 +30,13 @@ def test_zero_minutes_keeps_games_closed(js):
     assert res == [0, False]
 
 
-@pytest.mark.parametrize("offset_ms,left_min,is_open", [
-    (0, 5, True), (1, 5, True), (4 * MIN + 1, 1, True), (5 * MIN - 1, 1, True), (5 * MIN, 0, False), (9 * MIN, 0, False),
-])
-def test_minutes_left(js, offset_ms, left_min, is_open):
+def test_minutes_left(js):
+    cases = [(0, 5, True), (1, 5, True), (4 * MIN + 1, 1, True), (5 * MIN - 1, 1, True), (5 * MIN, 0, False), (9 * MIN, 0, False)]
     res = js("""
         const s = m.playtime.openPlayWindow(m.storage.defaultState(), arg.now);
-        const t = arg.now + arg.off;
-        return [m.playtime.playMinutesLeft(s, t, false), m.playtime.isPlayOpen(s, t, false)];
-    """, {"now": NOW, "off": offset_ms})
-    assert res == [left_min, is_open]
-
+        return arg.offsets.map(o => [m.playtime.playMinutesLeft(s, arg.now + o, false), m.playtime.isPlayOpen(s, arg.now + o, false)]);
+    """, {"now": NOW, "offsets": [c[0] for c in cases]})
+    assert res == [[c[1], c[2]] for c in cases]
 
 def test_clock_set_backwards_is_capped(js):
     """If the device clock jumps back, the window never grows beyond the configured length."""

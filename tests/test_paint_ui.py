@@ -2,8 +2,6 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 from test_ui import active_screen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
@@ -155,43 +153,30 @@ def test_clear_needs_confirmation(app_page):
     assert pixel(page, 310, 300)[3] == 0
 
 
-@pytest.mark.parametrize("viewport", [config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT])
-def test_paint_layout(app_page, viewport):
+def test_layout_at_all_screen_sizes(app_page):
+    """At every screen size: no scrolling, big enough buttons and wheel, and line art exactly on top of the
+    paint layer in the right proportion (otherwise the paint bucket's borders would not match the lines)."""
     page = app_page
-    page.set_viewport_size(viewport)
     open_picture(page, "taenzerin")
-    size = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
-    assert size[0] <= viewport["width"] + 1 and size[1] <= viewport["height"] + 1
-    wheel = page.locator(".color-wheel").bounding_box()
-    assert wheel["width"] >= 200, "wheel big enough for small fingers"
-    buttons = page.eval_on_selector_all("#screen-paint button", "els => els.filter(e => e.offsetParent).map(e => [e.id || e.className, e.offsetWidth, e.offsetHeight])")
-    for name, w, h in buttons:
-        assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (name, w, h)
-    canvas = page.locator("#screen-paint canvas.paint-layer").bounding_box()
-    assert abs(canvas["width"] / canvas["height"] - 1024 / 640) < 0.02, "picture keeps its proportions"
-
-
-@pytest.mark.parametrize("viewport", [{"width": 1880, "height": 920}, {"width": 1366, "height": 1024},
-                                      {"width": 1024, "height": 768}, {"width": 768, "height": 1024}])
-def test_lines_align_with_paint_layer(app_page, viewport):
-    """Line art and paint layer must cover exactly the same area in the right proportion, at any
-    screen size – otherwise the paint bucket's borders do not match the visible lines."""
-    page = app_page
-    page.set_viewport_size(viewport)
-    open_picture(page, "taenzerin")
-    page.clock.run_for(100)
-    boxes = page.evaluate("""() => {
-        const r = s => { const b = document.querySelector(s).getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
-        return { canvas: r('#screen-paint canvas.paint-layer'), lines: r('#screen-paint .line-art'),
-                 ratio: document.querySelector('#screen-paint .line-art').getAttribute('preserveAspectRatio') };
-    }""")
-    canvas, lines = boxes["canvas"], boxes["lines"]
-    assert all(abs(a - b) < 1 for a, b in zip(canvas, lines)), boxes
-    assert abs(canvas[2] / canvas[3] - 1024 / 640) < 0.01, ("picture keeps its proportions", canvas)
-    assert boxes["ratio"] == "none", "lines are always stretched exactly like the paint layer"
-    size = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
-    assert size[0] <= viewport["width"] + 1 and size[1] <= viewport["height"] + 1
-
+    for viewport in ({"width": 1880, "height": 920}, {"width": 1366, "height": 1024}, config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT):
+        page.set_viewport_size(viewport)
+        page.clock.run_for(100)
+        page.wait_for_timeout(50)  # resize observer
+        info = page.evaluate("""() => {
+            const r = s => { const b = document.querySelector(s).getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+            const buttons = [...document.querySelectorAll('#screen-paint button')].filter(e => e.offsetParent)
+                .map(e => [e.id || e.className, e.offsetWidth, e.offsetHeight]);
+            return { canvas: r('#screen-paint canvas.paint-layer'), lines: r('#screen-paint .line-art'), wheel: r('.color-wheel'),
+                     ratio: document.querySelector('#screen-paint .line-art').getAttribute('preserveAspectRatio'), buttons,
+                     size: [document.documentElement.scrollWidth, document.documentElement.scrollHeight] };
+        }""")
+        canvas, lines = info["canvas"], info["lines"]
+        assert info["size"][0] <= viewport["width"] + 1 and info["size"][1] <= viewport["height"] + 1, viewport
+        assert all(abs(a - b) < 1 for a, b in zip(canvas, lines)) and info["ratio"] == "none", (viewport, info)
+        assert abs(canvas[2] / canvas[3] - 1024 / 640) < 0.01, ("picture keeps its proportions", viewport, canvas)
+        assert info["wheel"][2] >= 200, "wheel big enough for small fingers"
+        for name, w, h in info["buttons"]:
+            assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (viewport, name, w, h)
 
 def test_bucket_border_matches_visible_line(app_page):
     """Filling the tutu must stop at the drawn line: a pixel just outside the tutu outline stays empty."""

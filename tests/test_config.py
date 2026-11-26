@@ -43,16 +43,11 @@ def test_surfaces_and_jaws_german(cfg):
     assert cfg["JAWS"] == {"unten": "unten", "oben": "oben", "beide": "unten und oben"}
 
 
-@pytest.mark.parametrize("catalog", ["STICKERS", "OUTFITS", "MOVES"])
-def test_catalog_ids_unique_and_named(cfg, catalog):
-    items = cfg[catalog]
-    ids = [i["id"] for i in items]
-    assert len(ids) == len(set(ids)), f"duplicate ids in {catalog}"
-    for item in items:
-        assert isinstance(item["name"], str) and item["name"].strip(), item
-
-
-def test_catalog_sizes(cfg):
+def test_catalogs(cfg):
+    for catalog in ("STICKERS", "OUTFITS", "MOVES"):
+        ids = [i["id"] for i in cfg[catalog]]
+        assert len(ids) == len(set(ids)), f"duplicate ids in {catalog}"
+        assert all(isinstance(i["name"], str) and i["name"].strip() for i in cfg[catalog]), catalog
     assert len(cfg["STICKERS"]) >= 30
     assert len(cfg["OUTFITS"]) >= 8
     assert len(cfg["MOVES"]) == len(cfg["REWARDS"]["moveStreakThresholds"]) + 1

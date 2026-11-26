@@ -2,8 +2,6 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 from test_ui import active_screen, brush_through, open_parents
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
@@ -240,19 +238,20 @@ def test_sugar_round(app_page):
     assert not page.console_errors, page.console_errors
 
 
-@pytest.mark.parametrize("viewport", [config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT])
-def test_game_screens_fit_and_have_big_buttons(app_page, viewport):
+def test_game_screens_fit_and_have_big_buttons(app_page):
     page = app_page
-    page.set_viewport_size(viewport)
     open_hub(page)
     for game in ("dance", "piano", "sugar"):
         page.click(f"#btn-game-{game}")
         if game == "piano":
             page.click("#btn-piano-free")
-        size = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
-        assert size[0] <= viewport["width"] + 1 and size[1] <= viewport["height"] + 1, game
-        buttons = page.eval_on_selector_all(
-            f"#screen-game-{game} button", "els => els.filter(e => e.offsetParent).map(e => [e.className, e.offsetWidth, e.offsetHeight])")
-        for cls, w, h in buttons:
-            assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (game, cls, w, h)
+        for viewport in (config.IPAD_LANDSCAPE, config.IPAD_PORTRAIT):
+            page.set_viewport_size(viewport)
+            size = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
+            assert size[0] <= viewport["width"] + 1 and size[1] <= viewport["height"] + 1, (game, viewport)
+            buttons = page.eval_on_selector_all(
+                f"#screen-game-{game} button", "els => els.filter(e => e.offsetParent).map(e => [e.className, e.offsetWidth, e.offsetHeight])")
+            for cls, w, h in buttons:
+                assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (game, viewport, cls, w, h)
+        page.set_viewport_size(config.IPAD_LANDSCAPE)
         page.click(f"#screen-game-{game} .btn-back")

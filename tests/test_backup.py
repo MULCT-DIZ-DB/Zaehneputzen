@@ -26,32 +26,21 @@ def test_backup_round_trip(js):
     assert isinstance(raw["exportedAt"], str) and raw["exportedAt"].startswith("2026-11-24")
 
 
-def test_file_name(js):
-    assert js("return m.backup.backupFileName(new Date(2026, 0, 5, 23));") == "zahnputz-tanz-2026-01-05.json"
-
-
-def test_invalid_backups_rejected(js):
+def test_parse_rejects_and_repairs(js):
+    """File name; broken, foreign, incomplete or oversized files are rejected; bad values inside are repaired."""
     res = js("""
-        return ['', '{kaputt', 'null', '[]', '42', JSON.stringify({ kind: 'etwas-anderes', state: {} }),
-                JSON.stringify({ kind: m.config.BACKUP.kind }), JSON.stringify({ kind: m.config.BACKUP.kind, state: 'x' })]
-            .map(t => m.backup.parseBackup(t).ok);
+        const bad = ['', '{kaputt', 'null', '[]', '42', JSON.stringify({ kind: 'etwas-anderes', state: {} }),
+                     JSON.stringify({ kind: m.config.BACKUP.kind }), JSON.stringify({ kind: m.config.BACKUP.kind, state: 'x' }),
+                     'x'.repeat(m.config.BACKUP.maxBytes + 1)].map(t => m.backup.parseBackup(t).ok);
+        const repaired = m.backup.parseBackup(JSON.stringify({ kind: m.config.BACKUP.kind, schema: 1,
+            state: { name: 5, stickers: ['stern-rosa', 'gibts-nicht'], sessions: -3 } }));
+        return [m.backup.backupFileName(new Date(2026, 0, 5, 23)), bad, repaired];
     """)
-    assert res == [False] * 8
-
-
-def test_bad_values_inside_backup_are_repaired(js):
-    res = js("""
-        const text = JSON.stringify({ kind: m.config.BACKUP.kind, schema: 1,
-            state: { name: 5, stickers: ['stern-rosa', 'gibts-nicht'], sessions: -3 } });
-        return m.backup.parseBackup(text);
-    """)
-    assert res["ok"] is True
-    assert res["state"]["stickers"] == ["stern-rosa"] and res["state"]["sessions"] == 0 and res["state"]["name"] == ""
-
-
-def test_too_large_file_rejected(js):
-    res = js("return m.backup.parseBackup('x'.repeat(m.config.BACKUP.maxBytes + 1)).ok;")
-    assert res is False
+    name, bad, repaired = res
+    assert name == "zahnputz-tanz-2026-01-05.json"
+    assert bad == [False] * 9
+    assert repaired["ok"] is True and repaired["state"]["stickers"] == ["stern-rosa"]
+    assert repaired["state"]["sessions"] == 0 and repaired["state"]["name"] == ""
 
 
 def finish_session(page) -> None:
