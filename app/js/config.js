@@ -177,6 +177,57 @@ export const AUDIO_MODES = Object.freeze([
   { id: 'schnell', name: 'Schnell (geringste Verzögerung)', latencyHint: 'interactive' },
 ]);
 
+/**
+ * Colouring game. Colours are stored as paint pigments (red, yellow, blue amounts 0…1, RYB model),
+ * so painting one colour over another mixes like real paint (red + blue = violet, yellow + blue = green).
+ */
+export const PAINT = Object.freeze({
+  /** Fixed picture resolution (all pictures, independent of the screen). */
+  width: 1024,
+  height: 640,
+  /** Colour wheel: 12 hues (clockwise from red) as RYB pigments; rings = pigment strength outside → inside. */
+  hues: [
+    { id: 'rot', ryb: [1, 0, 0] }, { id: 'rotorange', ryb: [1, 0.5, 0] }, { id: 'orange', ryb: [1, 1, 0] },
+    { id: 'gelborange', ryb: [0.5, 1, 0] }, { id: 'gelb', ryb: [0, 1, 0] }, { id: 'gelbgruen', ryb: [0, 1, 0.5] },
+    { id: 'gruen', ryb: [0, 1, 1] }, { id: 'blaugruen', ryb: [0, 0.5, 1] }, { id: 'blau', ryb: [0, 0, 1] },
+    { id: 'blaulila', ryb: [0.5, 0, 1] }, { id: 'lila', ryb: [1, 0, 1] }, { id: 'rotlila', ryb: [1, 0, 0.5] },
+  ],
+  rings: [1, 0.6, 0.32],
+  /** RYB cube corners as RGB (0…1): white, red, yellow, blue, orange, violet, green, all three (brown). */
+  cube: {
+    w: [1, 1, 1], r: [0.9, 0.16, 0.14], y: [1, 0.88, 0.2], b: [0.16, 0.36, 0.68],
+    ry: [0.98, 0.52, 0.1], rb: [0.52, 0.16, 0.56], yb: [0.18, 0.62, 0.26], ryb: [0.24, 0.13, 0.06],
+  },
+  /** Steps per pigment channel in the colour lookup table (speed on the iPad 5). */
+  lutLevels: 33,
+  tools: [
+    { id: 'stift', name: 'Stift', icon: 'wz-stift', radius: 5 },
+    { id: 'pinsel', name: 'Pinsel', icon: 'wz-pinsel', radius: 18 },
+    { id: 'spray', name: 'Spray', icon: 'wz-spray', radius: 28 },
+    { id: 'eimer', name: 'Farbeimer', icon: 'wz-eimer', radius: 0 },
+    { id: 'radierer', name: 'Radierer', icon: 'wz-radierer', radius: 20 },
+  ],
+  sizes: [{ id: 'klein', name: 'Klein', scale: 0.6 }, { id: 'mittel', name: 'Mittel', scale: 1 }, { id: 'gross', name: 'Groß', scale: 1.8 }],
+  /** Distance between brush dabs along a stroke, as a share of the radius. */
+  dabSpacing: 0.3,
+  sprayDots: 14,
+  sprayDotRadius: 1.6,
+  /** Fill reaches this many pixels under the lines, so no white gaps stay at the edges. */
+  fillUnderLine: 3,
+  /** Pixels with more line-art opacity than this are borders for the paint bucket. */
+  lineThreshold: 90,
+  lineWidth: 5,
+  undoSteps: 6,
+  saveDelayMs: 600,
+  /** Colouring pictures (line art in js/paint/templates.js). */
+  pictures: [
+    { id: 'frei', name: 'Freies Blatt' }, { id: 'taenzerin', name: 'Tänzerin' }, { id: 'buehne', name: 'Ballettbühne' },
+    { id: 'katze', name: 'Katze' }, { id: 'schmetterling', name: 'Schmetterling' }, { id: 'regenbogen', name: 'Regenbogen' },
+  ],
+  dbName: 'zahnputz-tanz-bilder',
+  dbStore: 'bilder',
+});
+
 /** Default parent settings. */
 export const DEFAULT_SETTINGS = Object.freeze({
   totalSec: TIMER.defaultTotalSec,
@@ -265,18 +316,18 @@ export const MUSIC = Object.freeze({
   bassGain: 0.09,
   chimeGain: 0.25,
   /**
-   * Piano voice, pre-rendered once per note into a buffer (cheap to play, no clicks):
-   * peak level, attack, quiet octave overtone, final fade-out, re-strike fade.
-   * Gain staging: maxVoices × pianoPeak × (1 + pianoOctaveGain) × masterGain stays below 1, so it never clips.
+   * Piano voice, pre-rendered once per note into a buffer and always played to its end
+   * (no fades or cut-offs while sounding): peak level, attack, quiet octave overtone,
+   * decay time constant as a share of the tone length, final fade to zero, silent tail.
+   * Overlapping repeats of one key add up to at most about 1 / (1 - e^(-gap/decay)) tones;
+   * the levels keep even very fast playing below clipping.
    */
-  pianoPeak: 0.35,
+  pianoPeak: 0.32,
   pianoAttackSec: 0.012,
   pianoOctaveGain: 0.18,
+  pianoDecayShare: 0.2,
   pianoEndFadeSec: 0.04,
   pianoTailSec: 0.3,
-  voiceFadeSec: 0.015,
-  /** At most this many piano tones sound at once; the oldest fades out quickly. */
-  maxVoices: 6,
   toneStartDelaySec: 0.005,
   lowpassHz: 2400,
   /** Chord roots (MIDI) for a 4-bar loop: C – Am – F – G. */
@@ -380,6 +431,13 @@ export const TEXT = Object.freeze({
   seconds: 'Sekunden',
   orderLabel: 'Putz-Reihenfolge',
   audioLabel: 'Klang (Klavier, Musik)',
+  paint: 'Malen',
+  paintPick: 'Was möchtest du malen?',
+  paintUndo: 'Zurück',
+  paintClear: 'Alles löschen',
+  paintClearAsk: 'Das ganze Bild löschen?',
+  paintYes: 'Ja, löschen',
+  paintNo: 'Nein',
   toothOuter: 'außen',
   toothInner: 'innen',
   pianoTempoLabel: 'Tempo:',

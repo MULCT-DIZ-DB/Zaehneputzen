@@ -127,3 +127,34 @@ def test_mouth_closes_for_outer_surfaces(app_page):
     page.clock.run_for(int(step * 2))  # Innenflächen: open again
     page.wait_for_timeout(800)
     assert mouth_shape(page)["upper"] == "none"
+
+def test_brush_travels_along_the_whole_row(app_page):
+    """The brush must reach every tooth: it travels along the whole arch, following its curve."""
+    page = app_page
+    start_brushing(page)
+    info = page.evaluate("""async () => {
+        const art = await import('./js/art.js');
+        const travel = document.querySelector('#screen-brush .brush-travel');
+        const cs = getComputedStyle(travel);
+        let frames = [];
+        for (const sheet of document.styleSheets) for (const rule of sheet.cssRules)
+            if (rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'travel')
+                frames = [...rule.cssRules].map(f => f.style.transform);
+        const xs = art.TOOTH_CENTERS.slice(0, 8).map(c => c.x);
+        const poses = Object.entries(art.BRUSH_POSES).flatMap(([s, jaws]) => Object.entries(jaws).map(([j, p]) => [s, j, p.up, p.x]));
+        return { name: cs.animationName, iterations: cs.animationIterationCount, frames, xs, poses };
+    }""")
+    assert info["name"] == "travel" and info["iterations"] == "infinite"
+    import re
+    pattern = re.compile(r"translate\(\s*(-?[\d.]+)(?:px)?(?:,\s*(-?[\d.]+)(?:px)?)?")  # y may be omitted when 0
+    assert all(pattern.search(f) for f in info["frames"]), info["frames"]
+    offsets = [tuple(float(v or 0) for v in pattern.search(f).groups()) for f in info["frames"]]
+    xs_rel = [o[0] for o in offsets]
+    head_half = 32  # brush head is 64 units wide
+    for surface, jaw, up, x in info["poses"]:
+        assert up == (jaw == "oben"), (surface, jaw, "flip the brush exactly on the lower jaw")
+        reach_left, reach_right = x + min(xs_rel) - head_half, x + max(xs_rel) + head_half
+        assert reach_left <= min(info["xs"]) and reach_right >= max(info["xs"]), (surface, jaw, reach_left, reach_right)
+    ends = [o for o in offsets if abs(o[0]) == max(abs(v) for v in xs_rel)]
+    middle = [o for o in offsets if o[0] == 0]
+    assert all(e[1] > m[1] + 10 for e in ends for m in middle), "follows the curve of the arch at the ends"

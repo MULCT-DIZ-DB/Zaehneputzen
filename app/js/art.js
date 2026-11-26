@@ -18,7 +18,7 @@ export const SPOTS_PER_JAW = 6;
 export const BRUSH_POSES = Object.freeze({
   kau: { unten: { x: 200, y: 190, up: false }, oben: { x: 200, y: 110, up: true } },
   // Outer surfaces are brushed with the mouth closed: the jaws move together (see style.css).
-  aussen: { unten: { x: 200, y: 178, up: true }, oben: { x: 200, y: 114, up: false } },
+  aussen: { unten: { x: 200, y: 178, up: false }, oben: { x: 200, y: 114, up: true } },
   innen: { unten: { x: 200, y: 176, up: false }, oben: { x: 200, y: 124, up: true } },
 });
 
@@ -182,7 +182,9 @@ export function drawMouth() {
   const tongue = svg('path', { d: sketchEllipse(200, 198, 92, 36, 3, 2), fill: C.zunge, class: 'tongue' });
   const jaws = { unten: jaw(false), oben: jaw(true) };
   const brushMotion = svg('g', { class: 'brush-motion' }, [toothbrush()]);
-  const brushFlip = svg('g', { class: 'brush-flip' }, [brushMotion]);
+  // brush-pos (where) > brush-flip (jaw) > brush-travel (along the whole row) > brush-motion (scrub/circles/wipe)
+  const brushTravel = svg('g', { class: 'brush-travel' }, [brushMotion]);
+  const brushFlip = svg('g', { class: 'brush-flip' }, [brushTravel]);
   const brush = svg('g', { class: 'brush-pos' }, [brushFlip]);
   const root = svgRoot('0 0 400 300', 'mouth', [lips, inner, tongue, jaws.unten, jaws.oben, brush]);
   return { root, jaws, brush, brushFlip, brushMotion };
