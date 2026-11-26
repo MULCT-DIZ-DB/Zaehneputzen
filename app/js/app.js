@@ -22,6 +22,8 @@ import { createGamesScreen } from './screens/games.js';
 import { createDanceGameScreen } from './screens/game-dance.js';
 import { createPianoGameScreen } from './screens/game-piano.js';
 import { createSugarGameScreen } from './screens/game-sugar.js';
+import { createPaintMenuScreen } from './screens/paintmenu.js';
+import { createPaintScreen } from './screens/paint.js';
 
 /** Query parameter for the short debug/test mode. */
 const FAST_PARAM = 'schnell';
@@ -31,6 +33,7 @@ const FACTORIES = [
   createStartScreen, createCountdownScreen, createBrushScreen, createRewardScreen,
   createAlbumScreen, createDressScreen, createCalendarScreen, createBackgroundsScreen, createParentsScreen,
   createGamesScreen, createDanceGameScreen, createPianoGameScreen, createSugarGameScreen,
+  createPaintMenuScreen, createPaintScreen,
 ];
 
 /**

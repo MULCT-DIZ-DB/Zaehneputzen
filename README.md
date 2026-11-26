@@ -11,6 +11,7 @@ Eine ruhige, gezeichnete Zahnputz-App für Kinder – gedacht als flüssige Alte
   - **Tanzschritte merken** – die Tänzerin zeigt Posen vor, das Kind tippt sie nach (2 bis 8 Schritte, kein „Verloren“).
   - **Klavier** – Töne gleiten auf 8 große Tasten (C–C); im richtigen Moment tippen oder über die Tasten streichen. Tempo: Langsam (Übungstempo, ca. 60–70 %), Mittel (85 % des Originaltempos), Normal (Originaltempo). Lieder: Alle meine Entchen, Ode an die Freude, Morgen kommt der Weihnachtsmann, Hänschen klein, Wiegenlied (Brahms) – plus „Frei spielen“.
   - **Zuckerjagd** – Zuckermonster auf den Zähnen wegtippen, 45 Sekunden pro Runde.
+- **Malen** (immer verfügbar): 6 Bilder (freies Blatt, Tänzerin, Ballettbühne, Katze, Schmetterling, Regenbogen), Farbkreis mit 12 Farben in 3 Helligkeiten und Weiß in der Mitte, Werkzeuge Stift, Pinsel, Spray, Farbeimer und Radierer in 3 Größen, „Zurück“ und „Alles löschen“. Farben mischen sich wie echte Malfarben (Rot über Blau = Lila, Gelb über Blau = Grün). Bilder werden pro Motiv auf dem Gerät gespeichert (nicht in der Sicherungsdatei enthalten).
 - **Eltern-Menü**: Symbol oben rechts antippen und eine **Malaufgabe** (kleines Einmaleins) lösen → Name, Putzzeit (60–150 s), Putz-Reihenfolge (KAI 6 oder 3 Schritte), Musik, Lautstärke, Spielzeit, Fortschritt löschen.
 
 Alles bleibt auf dem Gerät (localStorage) – es werden keine Daten verschickt.

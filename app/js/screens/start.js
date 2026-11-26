@@ -96,6 +96,7 @@ export function createStartScreen(ctx) {
     iconButton('kleid', TEXT.dressUp, () => ctx.show('dress'), '', { id: 'btn-dress', showLabel: true }),
     iconButton('kalender', TEXT.calendar, () => ctx.show('calendar'), '', { id: 'btn-calendar', showLabel: true }),
     iconButton('bild', TEXT.backgrounds, () => ctx.show('backgrounds'), '', { id: 'btn-backgrounds', showLabel: true }),
+    iconButton('malen', TEXT.paint, () => ctx.show('paintmenu'), '', { id: 'btn-paint', showLabel: true }),
     iconButton('spiele', TEXT.playTime, () => { ctx.music.unlock(); ctx.show('games'); }, 'btn-games-start',
       { id: 'btn-games-start', showLabel: true }),
   ]);

@@ -449,3 +449,32 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .mouth[data-surface='aussen'] .jaw-unten { transform: translateY(-52px); }
 .mouth[data-surface='aussen'] .mouth-inner { transform: scaleY(0.55); }
 .mouth[data-surface='aussen'] .tongue { opacity: 0; }
+/* ---------- Colouring game ---------- */
+.paint-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px; align-content: start; padding: 4px; }
+.paint-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; font-size: 26px; }
+.paint-thumb { width: 100%; aspect-ratio: 1024 / 640; background: var(--papier); border: 2px solid var(--tinte); border-radius: 12px; overflow: hidden; }
+.thumb-art { width: 100%; height: 100%; display: block; }
+.paint-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; align-items: center; }
+.paint-stage { position: relative; width: 100%; max-height: 100%; aspect-ratio: 1024 / 640; justify-self: center; touch-action: none;
+  background: #FFFDF8; border: 3px solid var(--tinte); border-radius: 14px; overflow: hidden; }
+.paint-layer, .line-box, .line-box .line-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.line-box { pointer-events: none; }
+.paint-panel { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.color-wheel { width: 230px; height: 230px; touch-action: none; }
+.wheel-seg { stroke: #FFFDF8; stroke-width: 1.5; cursor: pointer; }
+.wheel-seg.selected { stroke: var(--tinte); stroke-width: 5; }
+.tool-row, .paint-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.paint-actions { grid-template-columns: repeat(2, 1fr); }
+.tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 4px; min-height: 72px; font-size: 17px; }
+.tool-btn .icon { width: 36px; height: 36px; }
+.tool-btn.selected, .size-btn.selected { background: var(--butter); border-width: 4px; }
+.size-row { display: flex; gap: 8px; }
+.size-btn { display: flex; align-items: center; justify-content: center; padding: 0; width: 72px; }
+.size-dot { width: var(--dot); height: var(--dot); border-radius: 50%; background: var(--tinte); }
+.paint-confirm { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(247, 241, 227, 0.9); }
+@media (orientation: portrait) {
+  .paint-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-items: start; }
+  .paint-panel { display: grid; grid-template-columns: 230px 1fr; grid-template-rows: auto auto auto; gap: 10px 16px; align-items: start; }
+  .paint-panel .color-wheel { grid-row: 1 / span 3; }
+}

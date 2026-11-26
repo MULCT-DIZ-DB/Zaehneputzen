@@ -210,6 +210,8 @@ export const PAINT = Object.freeze({
   sizes: [{ id: 'klein', name: 'Klein', scale: 0.6 }, { id: 'mittel', name: 'Mittel', scale: 1 }, { id: 'gross', name: 'Groß', scale: 1.8 }],
   /** Distance between brush dabs along a stroke, as a share of the radius. */
   dabSpacing: 0.3,
+  /** Brush: this share of the radius is fully opaque, the rest fades softly. */
+  brushCore: 0.5,
   sprayDots: 14,
   sprayDotRadius: 1.6,
   /** Fill reaches this many pixels under the lines, so no white gaps stay at the edges. */
