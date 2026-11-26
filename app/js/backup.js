@@ -118,11 +118,20 @@ export function requestPersistentStorage() {
  */
 export async function deliverBackup(state) {
   const now = new Date();
-  const name = backupFileName(now);
-  const blob = new Blob([serializeBackup(state, now)], { type: BACKUP.mime });
+  return deliverFile(new Blob([serializeBackup(state, now)], { type: BACKUP.mime }), backupFileName(now));
+}
+
+/**
+ * Hands a file to the user: the share sheet where files can be shared (iPad: Fotos, Dateien,
+ * AirDrop, Mail …), otherwise a normal download. Used for backups and saved paintings.
+ * @param {Blob} blob File content (its type is kept).
+ * @param {string} name File name.
+ * @returns {Promise<boolean>} False if the user cancelled the share sheet.
+ */
+export async function deliverFile(blob, name) {
   const nav = /** @type {any} */ (navigator);
   if (typeof File === 'function' && typeof nav.canShare === 'function') {
-    const file = new File([blob], name, { type: BACKUP.mime });
+    const file = new File([blob], name, { type: blob.type });
     if (nav.canShare({ files: [file] })) {
       try {
         await nav.share({ files: [file], title: name });

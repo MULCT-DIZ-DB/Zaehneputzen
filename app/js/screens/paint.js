@@ -4,11 +4,13 @@
  * (pen, brush, spray, bucket, eraser), sizes, undo and clear. Paint mixes like real paint.
  * @module screens/paint
  */
-import { TEXT, PAINT } from '../config.js';
+import { TEXT, PAINT, PALETTE } from '../config.js';
 import { el, svg, svgRoot, clear } from '../dom.js';
 import { icon } from '../art.js';
 import { createBuffer, applyDab, erase, spray, floodFill, render, createUndo, paletteColors, rybToRgb } from '../paint/engine.js';
-import { drawLineArt, lineMask } from '../paint/templates.js';
+import { drawLineArt, lineMask, picturePaths } from '../paint/templates.js';
+import { deliverFile } from '../backup.js';
+import { dateKey } from '../rewards.js';
 import { loadPicture, savePicture } from '../paint/store.js';
 import { makeScreen, textButton } from './base.js';
 
@@ -80,6 +82,8 @@ export function createPaintScreen(ctx) {
       on: { click: () => undoStep() } }, [icon('rueckgaengig'), el('span', { text: TEXT.paintUndo })]),
     el('button', { cls: 'btn tool-btn', id: 'btn-paint-clear', attrs: { type: 'button', 'aria-label': TEXT.paintClear },
       on: { click: () => { confirm.hidden = false; } } }, [icon('muell'), el('span', { text: TEXT.paintClear })]),
+    el('button', { cls: 'btn tool-btn', id: 'btn-paint-save', attrs: { type: 'button', 'aria-label': TEXT.paintSave },
+      on: { click: () => { savePng(); } } }, [icon('speichern'), el('span', { text: TEXT.paintSave })]),
   ]);
   body.append(el('div', { cls: 'paint-layout' }, [stageWrap, el('div', { cls: 'paint-panel' }, [
     wheel, el('div', { cls: 'tool-row' }, toolBtns), el('div', { cls: 'size-row' }, sizeBtns), actions,
@@ -242,6 +246,31 @@ export function createPaintScreen(ctx) {
     if (!picture) return;
     const id = picture;
     savePicture(id, buf).then(() => { section.dataset.saved = id; });
+  }
+
+  /**
+   * Hands the painting out as a PNG (white paper, paint, black lines on top): share sheet on the iPad
+   * (e.g. 'Bild sichern' into Fotos), download elsewhere. File name: <picture>-<date>.png.
+   * @returns {Promise<void>}
+   */
+  async function savePng() {
+    if (!picture) return;
+    flush();
+    const out = document.createElement('canvas');
+    out.width = W;
+    out.height = H;
+    const o = /** @type {CanvasRenderingContext2D} */ (out.getContext('2d'));
+    o.fillStyle = PALETTE.weiss;
+    o.fillRect(0, 0, W, H);
+    o.drawImage(canvas, 0, 0);
+    o.strokeStyle = PALETTE.tinte;
+    o.lineWidth = PAINT.lineWidth;
+    o.lineCap = 'round';
+    o.lineJoin = 'round';
+    picturePaths(picture).forEach((d) => o.stroke(new Path2D(d)));
+    const name = `${picture}-${dateKey(new Date())}.png`;
+    const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/png'));
+    if (blob) await deliverFile(/** @type {Blob} */ (blob), name);
   }
 
   /** One step back. @returns {void} */

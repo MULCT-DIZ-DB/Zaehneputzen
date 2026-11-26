@@ -437,6 +437,7 @@ export const TEXT = Object.freeze({
   paintPick: 'Was möchtest du malen?',
   paintUndo: 'Zurück',
   paintClear: 'Alles löschen',
+  paintSave: 'Speichern',
   paintClearAsk: 'Das ganze Bild löschen?',
   paintYes: 'Ja, löschen',
   paintNo: 'Nein',

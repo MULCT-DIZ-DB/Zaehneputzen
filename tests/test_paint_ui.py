@@ -189,3 +189,36 @@ def test_bucket_border_matches_visible_line(app_page):
     assert pixel(page, 512, 250)[3] == 255
     assert pixel(page, 512, 192)[3] == 0, "neck area above the body outline stays white"
     assert pixel(page, 300, 250)[3] == 0, "background outside the dancer stays white"
+
+def test_save_painting_as_png(app_page, tmp_path):
+    """'Speichern' hands out a PNG of the painting with the black lines on white paper (download where
+    the share sheet is unavailable)."""
+    import base64
+    import re
+    page = app_page
+    page.evaluate("Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true })")
+    open_picture(page, "katze")
+    pick(page, color="rot-1", tool="pinsel", size="gross")
+    stroke(page, [(100, 560), (200, 560)])
+    with page.expect_download() as info:
+        page.click("#btn-paint-save")
+    download = info.value
+    assert re.fullmatch(r"katze-\d{4}-\d{2}-\d{2}\.png", download.suggested_filename), download.suggested_filename
+    target = tmp_path / download.suggested_filename
+    download.save_as(target)
+    data = target.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+    image = page.evaluate("""async (b64) => {
+        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const at = (x, y) => Array.from(g.getImageData(x, y, 1, 1).data);
+        let darkest = 255;   // the cat's body outline crosses y = 460 near x = 285
+        for (let x = 270; x <= 300; x++) darkest = Math.min(darkest, at(x, 460)[0]);
+        return { w: img.width, h: img.height, painted: at(150, 560), paper: at(5, 5), darkest };
+    }""", base64.b64encode(data).decode())
+    assert (image["w"], image["h"]) == (1024, 640)
+    r, g, b, a = image["painted"]
+    assert a == 255 and r > 150 and g < 110, image["painted"]
+    assert min(image["paper"][:3]) > 240 and image["paper"][3] == 255, "white paper, not transparent"
+    assert image["darkest"] < 110, "black lines are part of the image"

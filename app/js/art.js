@@ -320,6 +320,8 @@ const ICONS = {
     inked('M36 22 Q44 28 40 36 Q36 30 36 22 Z', C.rosa)],
   'wz-radierer': () => [inked('M8 30 L26 12 L40 26 L22 44 Z', C.rosa), inked('M8 30 L16 22 L30 36 L22 44 Z', C.weiss)],
   rueckgaengig: () => [svg('path', { d: 'M14 20 L8 14 L14 8 M8 14 L28 14 Q40 14 40 27 Q40 40 27 40 L16 40', class: 'ink-line', fill: 'none' })],
+  speichern: () => [inked('M8 30 L8 42 L40 42 L40 30', C.salbei),
+    svg('path', { d: 'M24 6 L24 32 M14 22 L24 32 L34 22', class: 'ink-line', fill: 'none' })],
   muell: () => [inked('M12 14 L36 14 L33 42 L15 42 Z', C.grau), svg('path', { d: 'M8 14 L40 14 M19 14 L19 8 L29 8 L29 14 M20 20 L21 36 M28 20 L27 36', class: 'ink-line thin', fill: 'none' })],
   klavier: () => [inked(sketchRect(4, 10, 40, 30, 30), C.weiss),
     svg('path', { d: 'M14 10 L14 40 M24 10 L24 40 M34 10 L34 40', class: 'ink-line thin' }),
