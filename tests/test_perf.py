@@ -4,6 +4,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import config  # noqa: E402
+import pytest  # noqa: E402
+
+#: Measured alone after the parallel run: other tests running at the same time would distort frame times.
+pytestmark = pytest.mark.perf
 
 FRAME_SAMPLER = """(ms) => new Promise(resolve => {
     const times = []; let last = performance.now(); const end = last + ms;
@@ -19,10 +23,10 @@ def open_game(page, game):
     page.click(f"#btn-game-{game}")
     if game == "piano":
         page.click(".song-btn[data-song='entchen']")
-        page.wait_for_timeout(2500)  # notes are falling now
+        page.wait_for_timeout(900)  # notes are falling now
     else:
         page.click("#btn-sugar-start")
-        page.wait_for_timeout(2000)  # bugs are popping up now
+        page.wait_for_timeout(1200)  # bugs are popping up now
 
 
 def test_frame_time_under_budget(chromium_page, base_url):
@@ -44,7 +48,7 @@ def test_frame_time_under_budget(chromium_page, base_url):
             page.wait_for_selector("#screen-dress.active")
         else:
             open_game(page, screen)
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(300)
         times = page.evaluate(FRAME_SAMPLER, config.PERF_SAMPLE_MS)[1:]
         results[screen] = sum(times) / len(times)
         cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})

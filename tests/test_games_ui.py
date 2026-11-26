@@ -20,21 +20,23 @@ def finish_brushing(page):
 
 
 def open_hub(page):
-    """Brushes, opens the reward gift and enters the games hub."""
-    finish_brushing(page)
-    if page.is_visible("#gift-box"):
-        page.click("#gift-box")
-        page.clock.run_for(1500)
-    page.click("#btn-games")
+    """Opens the games hub with play time already granted (that brushing grants it is tested separately)."""
+    page.evaluate("""async () => {
+        const c = await import('./js/config.js');
+        localStorage.setItem(c.STORAGE_KEY, JSON.stringify({ playUntil: Date.now() + c.DEFAULT_SETTINGS.playMinutes * 60000 }));
+    }""")
+    page.reload()
+    page.wait_for_selector("#screen-start.active")
+    page.click("#btn-games-start")
     assert active_screen(page) == "screen-games"
 
 
 def wait_phase(page, phase, max_ms=20000):
     """Advances the fake clock until the dance game reaches ``phase``."""
-    for _ in range(max_ms // 250):
+    for _ in range(max_ms // 500):
         if page.get_attribute("#screen-game-dance", "data-phase") == phase:
             return
-        page.clock.run_for(250)
+        page.clock.run_for(500)
     raise AssertionError(f"phase {phase} not reached")
 
 
@@ -76,7 +78,8 @@ def test_zero_play_minutes_hides_games(app_page):
 def test_time_up_overlay(app_page):
     page = app_page
     open_hub(page)
-    page.clock.run_for(cfg(page, "DEFAULT_SETTINGS.playMinutes") * 60000 + 2000)
+    page.clock.fast_forward(cfg(page, "DEFAULT_SETTINGS.playMinutes") * 60000 + 2000)  # jump, no per-second ticks
+    page.clock.run_for(1100)
     assert page.is_visible("#screen-games .timeup-box")
     page.click("#screen-games .btn-timeup")
     assert active_screen(page) == "screen-start"
@@ -217,7 +220,8 @@ def test_piano_song_ends_with_stars(app_page):
     open_hub(page)
     page.click("#btn-game-piano")
     page.click(".song-btn[data-song='entchen']")
-    page.clock.run_for(60000)
+    page.clock.fast_forward(60000)  # jump to the end of the song
+    page.clock.run_for(100)
     assert page.is_visible("#piano-result")
     assert "★" in page.inner_text("#piano-result")
 
@@ -231,7 +235,8 @@ def test_sugar_round(app_page):
     assert page.locator(".bug").count() >= 1
     page.locator(".bug").first.click(force=True)
     assert page.inner_text("#sugar-count").strip() == "1"
-    page.clock.run_for(cfg(page, "SUGAR.roundMs") + 500)
+    page.clock.fast_forward(cfg(page, "SUGAR.roundMs") + 500)  # jump to the end of the round
+    page.clock.run_for(100)
     assert page.is_visible("#sugar-result")
     assert "1" in page.inner_text("#sugar-result")
     assert page.locator(".bug").count() == 0

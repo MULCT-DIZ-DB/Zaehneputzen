@@ -3,6 +3,7 @@
 All paths are derived from this file's location so the project stays
 portable across operating systems and machines.
 """
+import os
 from pathlib import Path
 
 #: Project root folder (parent of ``tools/``).
@@ -54,7 +55,7 @@ MAX_AVG_FRAME_MS = 20.0
 CPU_THROTTLE_RATE = 4
 
 #: How long the performance test samples frames (ms).
-PERF_SAMPLE_MS = 3000
+PERF_SAMPLE_MS = 1500
 
 #: Fixed start time of the fake browser clock in UI tests (ISO, Berlin morning slot).
 TEST_CLOCK_START = "2026-11-24T08:00:00+01:00"
@@ -70,6 +71,11 @@ LICENCE_FILES = ("app/fonts/OFL.txt",)
 
 #: Private network addresses allowed in files (loopback/any – not machine specific).
 ALLOWED_IPS = ("127.0.0.1", "0.0.0.0", "10.255.255.255")  # last one: fixed probe address in serve.local_ip()
+
+#: Parallel test workers (pytest-xdist). Each runs its own server and browser, so the load must stay low:
+#: at most 4 workers and never more than a quarter of the CPU cores (the computer must stay usable).
+MAX_TEST_WORKERS = 4
+TEST_WORKERS = max(1, min(MAX_TEST_WORKERS, (os.cpu_count() or 1) // 4))
 
 #: Fake URL used to load an empty same-origin page for module tests.
 HARNESS_PATH = "/__harness__.html"

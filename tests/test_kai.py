@@ -120,12 +120,14 @@ def test_mouth_closes_for_outer_surfaces(app_page):
     step = fast_total_ms(page) / 6
     page.clock.run_for(int(step * 2) + 50)  # Außenflächen unten
     assert state(page)["surface"] == "aussen"
-    page.wait_for_timeout(800)  # let the closing transition finish (real time)
+    page.evaluate("document.getAnimations().filter(a => a.effect && a.effect.getTiming().iterations !== Infinity)"
+                  ".forEach(a => a.finish())")  # end the open/close transitions at once
     closed = mouth_shape(page)
     assert closed["upper"] != "none" and closed["lower"] != "none", "jaws moved together"
     assert closed["inner"] != "none" and float(closed["tongue"]) < 0.05, "mouth closed, tongue hidden"
     page.clock.run_for(int(step * 2))  # Innenflächen: open again
-    page.wait_for_timeout(800)
+    page.evaluate("document.getAnimations().filter(a => a.effect && a.effect.getTiming().iterations !== Infinity)"
+                  ".forEach(a => a.finish())")  # end the open/close transitions at once
     assert mouth_shape(page)["upper"] == "none"
 
 def test_brush_travels_along_the_whole_row(app_page):

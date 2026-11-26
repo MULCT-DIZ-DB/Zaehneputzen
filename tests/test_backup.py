@@ -1,7 +1,7 @@
 """Tests for exporting/importing progress (``app/js/backup.js`` and the parent menu)."""
 import json
 
-from test_ui import active_screen, open_parents
+from test_ui import brush_through, active_screen, open_parents
 from test_devmode import solve
 
 PRE = """
@@ -45,9 +45,7 @@ def test_parse_rejects_and_repairs(js):
 
 def finish_session(page) -> None:
     """Brushes once (fast mode) and takes the gift."""
-    page.click("#btn-start")
-    page.clock.run_for(page.evaluate("import('./js/config.js').then(c => c.TIMER.fastCountdownSec * 1000)") + 100)
-    page.clock.run_for(page.evaluate("import('./js/config.js').then(c => c.TIMER.fastTotalSec * 1000)") + 500)
+    brush_through(page)
     page.click("#gift-box")
     page.clock.run_for(1500)
     page.click("#btn-reward-next")

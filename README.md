@@ -63,6 +63,9 @@ Schnelltest-Modus: `…/index.html?schnell=1` (20 s Putzzeit, 1 s Countdown).
 
 Enthält Logik-Tests (Datentypen, Grenzfälle wie Schaltjahr, Zeitumstellung, Monatswechsel, kaputte Speicherdaten), einen kompletten Durchlauf in WebKit mit künstlicher Uhr und einen Performance-Test mit 4-fach gedrosselter CPU.
 
+- Die Tests laufen **parallel mit höchstens 4 Prozessen** (nie mehr als ein Viertel der CPU-Kerne, `tools/config.py`) und mit **niedriger Priorität** – der Rechner bleibt dabei bedienbar. Danach läuft der Performance-Test allein. Dauer: knapp 1 Minute.
+- Tests, die nur das Ergebnis des Zähneputzens brauchen, springen mit der künstlichen Uhr direkt ans Ende; nur die Tests der KAI-Schritte laufen Schritt für Schritt.
+
 ## Veröffentlichen (GitHub Pages)
 
 Die App läuft unter **<https://mulct-diz-db.github.io/Zaehneputzen/>** (HTTPS, daher funktioniert auch der Offline-Modus). Schritt-für-Schritt-Anleitung: [docs/DEPLOY.md](docs/DEPLOY.md).

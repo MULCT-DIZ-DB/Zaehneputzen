@@ -1,6 +1,7 @@
 """Shared pytest fixtures: test server, iPad-like browser context, module harness."""
 from __future__ import annotations
 
+import os
 import sys
 import threading
 from pathlib import Path
@@ -10,7 +11,33 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import config  # noqa: E402
+import config as tools_config  # noqa: E402  (name used inside hooks whose parameter is also called 'config')
 from serve import make_server  # noqa: E402
+
+
+def lower_process_priority() -> None:
+    """Runs the tests (and the browsers they start, which inherit it) at below-normal priority,
+    so the computer stays responsive for the IDE and other programs while tests run."""
+    try:
+        if sys.platform == "win32":
+            import ctypes  # noqa: PLC0415 (Windows only)
+            below_normal = 0x00004000  # BELOW_NORMAL_PRIORITY_CLASS
+            kernel = ctypes.windll.kernel32
+            kernel.SetPriorityClass(kernel.GetCurrentProcess(), below_normal)
+        else:
+            os.nice(10)
+    except (OSError, AttributeError):
+        pass  # priority is a courtesy; tests still run
+
+
+def pytest_configure(config):  # noqa: ARG001 (pytest hook signature)
+    """Lowers the priority of the test process and of every parallel worker."""
+    lower_process_priority()
+
+
+def pytest_xdist_auto_num_workers(config):  # noqa: ARG001 (pytest-xdist hook signature)
+    """`-n auto` uses the safe worker count from tools/config.py, not one worker per CPU core."""
+    return tools_config.TEST_WORKERS
 
 
 @pytest.fixture(scope="session")
@@ -124,7 +151,8 @@ def js(harness) -> Callable[..., Any]:
 
 @pytest.fixture()
 def app_page(page, base_url: str):
-    """Opens the real app in fast mode with fresh storage and collects console errors.
+    """Opens the real app in fast mode and collects console errors. Storage is empty: every test gets a
+    fresh browser context from pytest-playwright, so no clearing (and no extra page load) is needed.
 
     Args:
         page: Playwright page fixture.
@@ -137,8 +165,6 @@ def app_page(page, base_url: str):
     page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
     page.on("pageerror", lambda exc: errors.append(str(exc)))
     page.clock.install(time=config.TEST_CLOCK_START)
-    page.goto(f"{base_url}/index.html")
-    page.evaluate("document.fonts.ready.then(() => localStorage.clear())")  # don't abort the font download
     page.goto(f"{base_url}/index.html?schnell=1")
     page.wait_for_selector("#screen-start.active")
     page.console_errors = errors

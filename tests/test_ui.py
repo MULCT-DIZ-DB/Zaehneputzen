@@ -25,11 +25,16 @@ def active_screen(page) -> str:
 
 
 def brush_through(page) -> None:
-    """Starts a brushing session and lets the fake clock run until the end."""
+    """Starts a brushing session and jumps to its end (for tests that only need the result).
+
+    ``fast_forward`` moves the fake clock in one jump; the app's 10 Hz tick then runs once, sees that the
+    time is up and finishes. Only tests that check the individual steps let the clock run step by step.
+    """
     page.click("#btn-start")
     page.clock.run_for(fast_countdown_ms(page) + 100)
     assert active_screen(page) == "screen-brush"
-    page.clock.run_for(fast_total_ms(page) + 500)
+    page.clock.fast_forward(fast_total_ms(page) + 200)
+    page.clock.run_for(100)
 
 
 def test_start_screen(app_page):
@@ -79,12 +84,14 @@ def test_pause_stops_time(app_page):
     page.click("#btn-start")
     page.clock.run_for(fast_countdown_ms(page) + 100)
     page.click("#btn-pause")
-    page.clock.run_for(fast_total_ms(page) * 2)
+    page.clock.fast_forward(fast_total_ms(page) * 2)
+    page.clock.run_for(200)
     assert active_screen(page) == "screen-brush"
     assert page.inner_text("#zone-label") == "Kauflächen unten"
     assert not page.is_visible("#btn-pause")
     page.click("#btn-resume")
-    page.clock.run_for(fast_total_ms(page) + 500)
+    page.clock.fast_forward(fast_total_ms(page) + 200)
+    page.clock.run_for(100)
     assert active_screen(page) == "screen-reward"
 
 
