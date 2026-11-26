@@ -23,7 +23,8 @@ export function midiToHz(midi) {
 export function buildSong() {
   const events = [];
   let beat = 0;
-  MUSIC.melody.forEach(([note, len]) => {
+  MUSIC.melody.forEach((entry) => {
+    const [note, len] = /** @type {[number|null, number]} */ (entry);
     if (note !== null) events.push({ beat, kind: /** @type {'mel'} */ ('mel'), notes: [note], beats: len });
     beat += len;
   });
@@ -39,8 +40,6 @@ export function buildSong() {
 export class Music {
   constructor() {
     /** @type {BaseAudioContext|null} */ this.ctx = null;
-    /** @type {{midi: number, src: AudioBufferSourceNode, gain: GainNode, end: number, stolen: boolean}[]} sounding piano voices */
-    this.live = [];
     /** @type {Map<string, AudioBuffer>} pre-rendered piano tones */
     this.toneBuffers = new Map();
     /** @type {GainNode|null} */ this.master = null;
@@ -67,7 +66,7 @@ export class Music {
         if (!Ctor) return;
         let context;
         try {
-          context = new Ctor({ latencyHint: this.latencyHint });
+          context = new Ctor({ latencyHint: /** @type {AudioContextLatencyCategory} */ (this.latencyHint) });
         } catch {
           context = new Ctor(); // older engines without options
         }
@@ -93,7 +92,6 @@ export class Music {
    */
   attach(context) {
     this.ctx = context;
-    this.live = [];
     this.toneBuffers = new Map();
     this.filter = context.createBiquadFilter();
     this.filter.type = 'lowpass';
@@ -131,7 +129,6 @@ export class Music {
     this.ctx = null;
     this.master = null;
     this.filter = null;
-    this.live = [];
     this.toneBuffers = new Map();
   }
 
@@ -213,12 +210,14 @@ export class Music {
 
   /** Pauses all sound (e.g. app in background). @returns {void} */
   suspend() {
-    if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {});
+    const live = /** @type {AudioContext|null} */ (this.ctx);
+    if (live && live.state === 'running' && live.suspend) live.suspend().catch(() => {});
   }
 
   /** Continues after `suspend()`. @returns {void} */
   resume() {
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    const live = /** @type {AudioContext|null} */ (this.ctx);
+    if (live && live.state === 'suspended' && live.resume) live.resume().catch(() => {});
   }
 
   /**
@@ -233,6 +232,14 @@ export class Music {
   }
 
   /**
+   * The audio clock as the page sees it (on iOS it can lag behind what is actually playing).
+   * @returns {number} Seconds.
+   */
+  now() {
+    return this.ctx ? this.ctx.currentTime : 0;
+  }
+
+  /**
    * Plays one piano tone right now (mini games). Works even when background music is off.
    * @param {number} midi MIDI note.
    * @param {number} durSec Length in seconds.
@@ -240,7 +247,7 @@ export class Music {
    */
   tone(midi, durSec) {
     if (!this.ctx) return;
-    this.toneAt(midi, this.ctx.currentTime + MUSIC.toneStartDelaySec, durSec);
+    this.toneAt(midi, this.now() + MUSIC.toneStartDelaySec, durSec);
   }
 
   /**
@@ -261,7 +268,7 @@ export class Music {
     const data = buffer.getChannelData(0);
     const w = (2 * Math.PI * midiToHz(midi)) / rate;
     const attack = MUSIC.pianoAttackSec * rate;
-    const tau = (durSec / 4) * rate;
+    const tau = durSec * MUSIC.pianoDecayShare * rate;
     const fade = MUSIC.pianoEndFadeSec * rate;
     for (let i = 0; i < n; i += 1) {
       let env = i < attack ? i / attack : Math.exp(-(i - attack) / tau);
@@ -273,21 +280,10 @@ export class Music {
   }
 
   /**
-   * Fades a sounding voice out quickly (re-strike or voice limit).
-   * @param {{src: AudioBufferSourceNode, gain: GainNode, end: number, stolen: boolean}} voice Voice.
-   * @param {number} when Context time.
-   * @returns {void}
-   */
-  fadeVoice(voice, when) {
-    voice.stolen = true;
-    voice.gain.gain.setTargetAtTime(0, when, MUSIC.voiceFadeSec);
-    voice.end = Math.min(voice.end, when + MUSIC.voiceFadeSec * 4);
-    voice.src.stop(voice.end);
-  }
-
-  /**
-   * Schedules a piano tone. One voice per key (a re-struck key fades its old tone) and at
-   * most `MUSIC.maxVoices` at once (the oldest fades) – cheap for the iPad and never clipping.
+   * Schedules a piano tone. Every tone plays its pre-rendered buffer to the end (the fade to
+   * zero is baked in): nothing is ever cut off or faded by automation while sounding, so there
+   * is no moment where the signal could jump (crackle). Re-struck keys simply overlap like on a
+   * real piano; the level is low enough that even fast repeats stay below clipping.
    * @param {number} midi MIDI note.
    * @param {number} when Start time (context seconds).
    * @param {number} durSec Length in seconds.
@@ -295,38 +291,12 @@ export class Music {
    */
   toneAt(midi, when, durSec) {
     if (!this.ctx || !this.master) return;
-    this.live = this.live.filter((v) => v.end > when);
-    this.live.filter((v) => v.midi === midi && !v.stolen).forEach((v) => this.fadeVoice(v, when));
-    const sounding = this.live.filter((v) => !v.stolen);
-    while (sounding.length >= MUSIC.maxVoices) this.fadeVoice(/** @type {any} */ (sounding.shift()), when);
-    const buffer = this.toneBuffer(midi, durSec);
     const src = this.ctx.createBufferSource();
-    src.buffer = buffer;
-    const gain = this.ctx.createGain();
-    src.connect(gain);
-    gain.connect(this.master);
-    src.start(when);
-    const voice = { midi, src, gain, end: when + buffer.duration, stolen: false };
-    src.onended = () => { this.live = this.live.filter((v) => v !== voice); };
-    this.live.push(voice);
+    src.buffer = this.toneBuffer(midi, durSec);
+    src.connect(this.master);
+    src.start(Math.max(when, this.ctx.currentTime));
   }
 
-  /**
-   * Number of piano tones currently sounding (not counting ones that are fading out).
-   * @returns {number}
-   */
-  activeVoices() {
-    return this.live.filter((v) => !v.stolen).length;
-  }
-
-  /**
-   * Number of sounding (not fading) voices of one key.
-   * @param {number} midi MIDI note.
-   * @returns {number}
-   */
-  voicesFor(midi) {
-    return this.live.filter((v) => v.midi === midi && !v.stolen).length;
-  }
   /** Little fanfare at the end. @returns {void} */
   fanfare() {
     this.chime(MUSIC.fanfareNotes);
