@@ -35,6 +35,7 @@ def pytest_configure(config):  # noqa: ARG001 (pytest hook signature)
     lower_process_priority()
 
 
+@pytest.hookimpl(optionalhook=True)  # only exists when pytest-xdist is installed/active
 def pytest_xdist_auto_num_workers(config):  # noqa: ARG001 (pytest-xdist hook signature)
     """`-n auto` uses the safe worker count from tools/config.py, not one worker per CPU core."""
     return tools_config.TEST_WORKERS

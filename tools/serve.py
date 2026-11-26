@@ -42,6 +42,9 @@ class QuietServer(ThreadingHTTPServer):
     """Threaded server that ignores clients closing idle keep-alive connections."""
 
     daemon_threads = True
+    # Browsers open many connections at once (the app loads ~30 modules); the default queue of 5
+    # waiting connections overflows when several test browsers run in parallel and requests then hang.
+    request_queue_size = 128
 
     def handle_error(self, request, client_address) -> None:
         """Skips the traceback for normal disconnects, reports everything else."""
