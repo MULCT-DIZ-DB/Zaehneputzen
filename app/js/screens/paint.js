@@ -60,6 +60,7 @@ export function createPaintScreen(ctx) {
   const image = g.createImageData(W, H);
   const lineBox = el('div', { cls: 'line-box' });
   const stageEl = el('div', { cls: 'paint-stage' }, [canvas, lineBox]);
+  const stageWrap = el('div', { cls: 'paint-stage-wrap' }, [stageEl]);
   const colors = new Map(paletteColors().map((c) => [c.id, c.ryb]));
   const wheel = colorWheel((id) => select('color', id));
   const toolBtns = PAINT.tools.map((t) => el('button', { cls: 'btn tool-btn', attrs: { type: 'button', 'data-tool': t.id, 'aria-label': t.name },
@@ -80,9 +81,23 @@ export function createPaintScreen(ctx) {
     el('button', { cls: 'btn tool-btn', id: 'btn-paint-clear', attrs: { type: 'button', 'aria-label': TEXT.paintClear },
       on: { click: () => { confirm.hidden = false; } } }, [icon('muell'), el('span', { text: TEXT.paintClear })]),
   ]);
-  body.append(el('div', { cls: 'paint-layout' }, [stageEl, el('div', { cls: 'paint-panel' }, [
+  body.append(el('div', { cls: 'paint-layout' }, [stageWrap, el('div', { cls: 'paint-panel' }, [
     wheel, el('div', { cls: 'tool-row' }, toolBtns), el('div', { cls: 'size-row' }, sizeBtns), actions,
   ])]), confirm);
+
+  /**
+   * Sizes the picture to the largest area with the exact picture proportions that fits the free space.
+   * @returns {void}
+   */
+  function fitStage() {
+    const r = stageWrap.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return;
+    const scale = Math.min(r.width / W, r.height / H);
+    stageEl.style.width = `${Math.floor(W * scale)}px`;
+    stageEl.style.height = `${Math.floor(H * scale)}px`;
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fitStage).observe(stageWrap);
+  window.addEventListener('resize', fitStage);
 
   let buf = createBuffer(W, H);
   let mask = new Uint8Array(W * H);
@@ -259,6 +274,7 @@ export function createPaintScreen(ctx) {
       if (header && meta) header.textContent = meta.name;
       clear(lineBox);
       lineBox.append(drawLineArt(picture));
+      window.requestAnimationFrame(fitStage);
       mask = lineMask(picture);
       buf = createBuffer(W, H);
       undo.clear();

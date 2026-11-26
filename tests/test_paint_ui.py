@@ -169,3 +169,38 @@ def test_paint_layout(app_page, viewport):
         assert w >= config.MIN_TOUCH_TARGET_PX and h >= config.MIN_TOUCH_TARGET_PX, (name, w, h)
     canvas = page.locator("#screen-paint canvas.paint-layer").bounding_box()
     assert abs(canvas["width"] / canvas["height"] - 1024 / 640) < 0.02, "picture keeps its proportions"
+
+
+@pytest.mark.parametrize("viewport", [{"width": 1880, "height": 920}, {"width": 1366, "height": 1024},
+                                      {"width": 1024, "height": 768}, {"width": 768, "height": 1024}])
+def test_lines_align_with_paint_layer(app_page, viewport):
+    """Line art and paint layer must cover exactly the same area in the right proportion, at any
+    screen size – otherwise the paint bucket's borders do not match the visible lines."""
+    page = app_page
+    page.set_viewport_size(viewport)
+    open_picture(page, "taenzerin")
+    page.clock.run_for(100)
+    boxes = page.evaluate("""() => {
+        const r = s => { const b = document.querySelector(s).getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+        return { canvas: r('#screen-paint canvas.paint-layer'), lines: r('#screen-paint .line-art'),
+                 ratio: document.querySelector('#screen-paint .line-art').getAttribute('preserveAspectRatio') };
+    }""")
+    canvas, lines = boxes["canvas"], boxes["lines"]
+    assert all(abs(a - b) < 1 for a, b in zip(canvas, lines)), boxes
+    assert abs(canvas[2] / canvas[3] - 1024 / 640) < 0.01, ("picture keeps its proportions", canvas)
+    assert boxes["ratio"] == "none", "lines are always stretched exactly like the paint layer"
+    size = page.evaluate("[document.documentElement.scrollWidth, document.documentElement.scrollHeight]")
+    assert size[0] <= viewport["width"] + 1 and size[1] <= viewport["height"] + 1
+
+
+def test_bucket_border_matches_visible_line(app_page):
+    """Filling the tutu must stop at the drawn line: a pixel just outside the tutu outline stays empty."""
+    page = app_page
+    page.set_viewport_size({"width": 1880, "height": 920})
+    open_picture(page, "taenzerin")
+    pick(page, color="rot-1", tool="eimer")
+    page.mouse.click(*to_screen(page, 512, 250))  # inside the body
+    page.clock.run_for(100)
+    assert pixel(page, 512, 250)[3] == 255
+    assert pixel(page, 512, 192)[3] == 0, "neck area above the body outline stays white"
+    assert pixel(page, 300, 250)[3] == 0, "background outside the dancer stays white"

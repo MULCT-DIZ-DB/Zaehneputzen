@@ -455,8 +455,10 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .paint-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; font-size: 26px; }
 .paint-thumb { width: 100%; aspect-ratio: 1024 / 640; background: var(--papier); border: 2px solid var(--tinte); border-radius: 12px; overflow: hidden; }
 .thumb-art { width: 100%; height: 100%; display: block; }
-.paint-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 16px; align-items: center; }
-.paint-stage { position: relative; width: 100%; max-height: 100%; aspect-ratio: 1024 / 640; justify-self: center; touch-action: none;
+.paint-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 270px; grid-template-rows: minmax(0, 1fr); gap: 16px; align-items: center; }
+/* The free space; paint.js sizes the stage inside it to exactly 1024:640. */
+.paint-stage-wrap { width: 100%; height: 100%; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.paint-stage { position: relative; flex: none; width: 640px; height: 400px; touch-action: none;
   background: #FFFDF8; border: 3px solid var(--tinte); border-radius: 14px; overflow: hidden; }
 .paint-layer, .line-box, .line-box .line-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .line-box { pointer-events: none; }
@@ -474,7 +476,7 @@ h1, h2, p { margin: 0; font-weight: normal; }
 .size-dot { width: var(--dot); height: var(--dot); border-radius: 50%; background: var(--tinte); }
 .paint-confirm { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(247, 241, 227, 0.9); }
 @media (orientation: portrait) {
-  .paint-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-items: start; }
+  .paint-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; align-items: stretch; }
   .paint-panel { display: grid; grid-template-columns: 230px 1fr; grid-template-rows: auto auto auto; gap: 10px 16px; align-items: start; }
   .paint-panel .color-wheel { grid-row: 1 / span 3; }
 }

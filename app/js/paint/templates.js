@@ -210,9 +210,12 @@ export function picturePaths(id) {
  * @returns {SVGElement}
  */
 export function drawLineArt(id, cls = 'line-art') {
-  return svgRoot(`0 0 ${PAINT.width} ${PAINT.height}`, cls, picturePaths(id).map((d) => svg('path', {
+  const root = svgRoot(`0 0 ${PAINT.width} ${PAINT.height}`, cls, picturePaths(id).map((d) => svg('path', {
     d, fill: 'none', stroke: C.tinte, 'stroke-width': PAINT.lineWidth, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
   })));
+  // Stretch exactly like the paint canvas below it, so lines and bucket borders always coincide.
+  root.setAttribute('preserveAspectRatio', 'none');
+  return root;
 }
 
 /**
